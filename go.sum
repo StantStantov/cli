@@ -1,0 +1,4 @@
+github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
+github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
+github.com/lesta-start-battleship/server-core v0.1.1 h1:kDeQX/ACgINBuDBudPiSE+zL224JIH0L61XBLq29i68=
+github.com/lesta-start-battleship/server-core v0.1.1/go.mod h1:sQtc+6M+W2CKD5oeJO+gBIZmutVdClcc05bDP97Pvf8=
