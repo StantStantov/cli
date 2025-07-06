@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"lesta-start-battleship/cli/internal/app"
+	"lesta-battleship/cli/internal/app"
 	"log"
 	"os"
 	"time"
