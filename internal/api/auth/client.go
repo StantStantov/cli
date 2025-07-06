@@ -59,32 +59,90 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 		}
 	}
 
+	// создание HTTP запроса с контекстом
 	req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), &buf)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка создания запроса: %w", err)
 	}
 
+	// установка заголовков
 	req.Header.Set("Content-Type", "application/json")
 	if c.accessToken != "" {
 		req.Header.Set("Authorization", "Bearer "+c.accessToken)
 	}
 
+	// выполнение запроса
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
+		// обработка сетевых ошибок (недоступность сервера)
+		return nil, fmt.Errorf("сетевая ошибка: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		var errResp ErrorResponse
-		if json.Unmarshal(body, &errResp) == nil && errResp.Error != "" {
-			return nil, fmt.Errorf("ошибка API: %s", errResp.Error)
-		}
-		return nil, fmt.Errorf("HTTP ошибка %d: %s", resp.StatusCode, string(body))
+	// чтение тела ответа
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка чтения ответа: %w", err)
 	}
 
-	return io.ReadAll(resp.Body)
+	// обработка HTTP ошибок (статус >= 400)
+	if resp.StatusCode >= 400 {
+		// Попытка распарсить как стандартную ошибку
+		var serviceErr ErrorResponse
+		if json.Unmarshal(responseBody, &serviceErr) == nil && serviceErr.Error != "" {
+			return nil, fmt.Errorf("ошибка сервиса: %s", serviceErr.Error)
+		}
+
+		// Попытка распарсить как ошибку Gateway
+		var gatewayErr struct {
+			Message string `json:"message"`
+		}
+		if json.Unmarshal(responseBody, &gatewayErr) == nil && gatewayErr.Message != "" {
+			return nil, fmt.Errorf("ошибка шлюза: %s", gatewayErr.Message)
+		}
+
+		// обработка специфичных статусов
+		switch resp.StatusCode {
+		case http.StatusUnauthorized:
+			return nil, fmt.Errorf("не авторизован")
+		case http.StatusServiceUnavailable: // 503
+			return nil, fmt.Errorf("сервис временно недоступен")
+		case http.StatusGatewayTimeout: // 504
+			return nil, fmt.Errorf("таймаут шлюза")
+		default:
+			// уменьшение ответа для удобства
+			errorBody := string(responseBody)
+			if len(errorBody) > 200 {
+				errorBody = errorBody[:200] + "..."
+			}
+			return nil, fmt.Errorf("HTTP ошибка %d: %s", resp.StatusCode, errorBody)
+		}
+	}
+
+	return responseBody, nil
+}
+
+// Register - регистрация нового пользователя
+func (c *Client) Register(ctx context.Context, req UserRegRequest) (*TokenResponse, error) {
+	body, err := c.doRequest(ctx, "POST", RegistrationPath, req)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка регистрации: %w", err)
+	}
+
+	var resp TokenResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
+	}
+
+	// установка токенов в клиент
+	c.SetTokens(resp.AccessToken, resp.RefreshToken)
+
+	profile, err := c.GetProfile(ctx)
+	if err == nil {
+		c.userID = profile.ID
+	}
+
+	return &resp, nil
 }
 
 // Login - вход по логину и паролю
@@ -98,7 +156,15 @@ func (c *Client) Login(ctx context.Context, req LoginRequest) (*TokenResponse, e
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
 	}
+
+	// установка токенов в клиент
 	c.SetTokens(resp.AccessToken, resp.RefreshToken)
+
+	profile, err := c.GetProfile(ctx)
+	if err == nil {
+		c.userID = profile.ID
+	}
+
 	return &resp, nil
 }
 
@@ -108,9 +174,15 @@ func (c *Client) RefreshToken(ctx context.Context) (*TokenResponse, error) {
 		return nil, fmt.Errorf("отсутствует refresh token")
 	}
 
-	body, err := c.doRequest(ctx, "POST", RefreshTokenPath, map[string]string{
-		"refresh_token": c.refreshToken,
-	})
+	// использование refresh token как временный access token
+	tempToken := c.accessToken
+	c.accessToken = c.refreshToken
+
+	body, err := c.doRequest(ctx, "POST", RefreshTokenPath, nil)
+
+	// восстановление оригинальный access token
+	c.accessToken = tempToken
+
 	if err != nil {
 		return nil, fmt.Errorf("ошибка обновления токена: %w", err)
 	}
@@ -119,13 +191,18 @@ func (c *Client) RefreshToken(ctx context.Context) (*TokenResponse, error) {
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
 	}
-	c.SetTokens(resp.AccessToken, resp.RefreshToken)
+	c.SetTokens(resp.AccessToken, c.refreshToken)
 	return &resp, nil
 }
 
 // GetProfile - получение профиля текущего пользователя
 func (c *Client) GetProfile(ctx context.Context) (*ProfileResponse, error) {
-	body, err := c.doRequest(ctx, "GET", ProfilePath, nil)
+	path := fmt.Sprintf(GetProfilePath, c.userID)
+	if c.userID == 0 {
+		return nil, fmt.Errorf("user ID not set")
+	}
+
+	body, err := c.doRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка получения профиля: %w", err)
 	}
@@ -292,12 +369,17 @@ func (c *Client) Logout(ctx context.Context) error {
 
 // UpdateUser - обновление данных пользователя (имя и/или пароль)
 func (c *Client) UpdateUser(ctx context.Context, req UpdateUserRequest) (*ProfileResponse, error) {
+	path := fmt.Sprintf(UpdateUserPath, c.userID)
+	if c.userID == 0 {
+		return nil, fmt.Errorf("user ID not set")
+	}
+
 	// проверка на наличие изменений
 	if req.Username == "" && req.Password == "" {
 		return nil, fmt.Errorf("не указаны данные для обновления")
 	}
 
-	body, err := c.doRequest(ctx, "PATCH", UpdateUserPath, req)
+	body, err := c.doRequest(ctx, "PATCH", path, req)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка обновления пользователя: %w", err)
 	}
@@ -312,7 +394,12 @@ func (c *Client) UpdateUser(ctx context.Context, req UpdateUserRequest) (*Profil
 
 // DeleteUser - удаление текущего пользователя
 func (c *Client) DeleteUser(ctx context.Context) error {
-	_, err := c.doRequest(ctx, "DELETE", DeleteUserPath, nil)
+	path := fmt.Sprintf(DeleteUserPath, c.userID)
+	if c.userID == 0 {
+		return fmt.Errorf("user ID not set")
+	}
+
+	_, err := c.doRequest(ctx, "DELETE", path, nil)
 	if err != nil {
 		return fmt.Errorf("ошибка удаления пользователя: %w", err)
 	}
@@ -323,11 +410,9 @@ func (c *Client) DeleteUser(ctx context.Context) error {
 
 // clearSession очищение состояния клиента (токены, куки, userID)
 func (c *Client) clearSession() {
-	// Сбрасываем токены и ID
+	// сброс токенов и ID
 	c.accessToken = ""
 	c.refreshToken = ""
 	c.userID = 0
-
-	// Очищаем куки
-	c.httpClient.Jar, _ = cookiejar.New(nil)
+	c.httpClient.Jar, _ = cookiejar.New(nil) // очистка куки
 }
