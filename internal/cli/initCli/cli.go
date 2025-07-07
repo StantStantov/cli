@@ -1,7 +1,7 @@
 package initCli
 
 import (
-	"github.com/charmbracelet/bubbletea"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"lesta-start-battleship/cli/internal/cli/models"
 )
@@ -9,7 +9,7 @@ import (
 type CLI struct {
 	currentScreen tea.Model
 	chatComponent *models.ChatComponent
-	authToken     string
+	gold          int
 	userID        string
 	username      string
 }
@@ -38,14 +38,14 @@ func (a *CLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case models.AuthSuccessMsg:
-		a.authToken = msg.Token
+		a.gold = msg.Gold
 		a.username = msg.Username
 		a.currentScreen = models.NewMainMenuModel(a.username)
 		a.chatComponent = models.NewChatComponent(a.username, 1)
 		return a, nil
 
 	case models.LogoutMsg:
-		a.authToken = ""
+		a.gold = 0
 		a.username = ""
 		a.currentScreen = models.NewAuthModel()
 		a.chatComponent.Close()

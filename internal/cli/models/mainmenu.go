@@ -9,6 +9,7 @@ import (
 
 type MainMenuModel struct {
 	username string
+	gold     int
 	selected int
 }
 

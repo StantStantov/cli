@@ -1,7 +1,9 @@
 package models
 
 import (
-	"github.com/charmbracelet/bubbletea"
+	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"strings"
 )
@@ -9,14 +11,17 @@ import (
 type AuthModel struct {
 	login       string
 	password    string
-	activeField int
+	activeField int // 0 - Логин, 1 - Пароль
+	activeTab   int // 0 - Авторизация, 1 - Регистрация
+	authMethod  int // 0 - Логин/Пароль, 1 - Google, 2 - Яндекс
 	errorMsg    string
-	registering bool
 }
 
 func NewAuthModel() *AuthModel {
 	return &AuthModel{
 		activeField: 0,
+		activeTab:   0,
+		authMethod:  0,
 	}
 }
 
@@ -29,57 +34,51 @@ func (m *AuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
-			if m.activeField == 1 {
-				m.errorMsg = ""
-				//m.Error = "Неверное имя или пароль"
-				if m.login == "" || m.password == "" {
-					m.errorMsg = "Введите логин и пароль"
-					return m, nil
-				}
-				if m.registering {
-					//ручка с регистрацией
-					m.login = ""
-					m.password = ""
-					m.registering = false
-					return m, nil
-				}
-				//ручка с авторизацией
-				if m.errorMsg != "" {
-					return m, nil
-				} else {
-					return m, func() tea.Msg {
-						return AuthSuccessMsg{
-							Token:    "dummy_token_" + m.login,
-							Username: m.login,
-						}
-					}
-				}
-			}
-			m.activeField = 1
-			return m, nil
+			return m.handleEnter()
 
 		case tea.KeyTab:
-			m.activeField = (m.activeField + 1) % 2
+			m.activeTab = (m.activeTab + 1) % 2
+			m.activeField = 0
+			return m, nil
+
+		case tea.KeyLeft:
+			m.authMethod = (m.authMethod - 1 + 3) % 3
+			return m, nil
+
+		case tea.KeyRight:
+			m.authMethod = (m.authMethod + 1) % 3
+			return m, nil
+
+		case tea.KeyDown:
+			if m.authMethod == 0 && m.activeField < 1 {
+				m.activeField++
+			}
+			return m, nil
+
+		case tea.KeyUp:
+			if m.authMethod == 0 && m.activeField > 0 {
+				m.activeField--
+			}
 			return m, nil
 
 		case tea.KeyBackspace:
-			if m.activeField == 0 && len(m.login) > 0 {
-				m.login = m.login[:len(m.login)-1]
-			} else if m.activeField == 1 && len(m.password) > 0 {
-				m.password = m.password[:len(m.password)-1]
+			if m.authMethod == 0 {
+				if m.activeField == 0 && len(m.login) > 0 {
+					m.login = m.login[:len(m.login)-1]
+				} else if m.activeField == 1 && len(m.password) > 0 {
+					m.password = m.password[:len(m.password)-1]
+				}
 			}
 			return m, nil
 
 		case tea.KeyRunes:
-			if m.activeField == 0 {
-				m.login += string(msg.Runes)
-			} else {
-				m.password += string(msg.Runes)
+			if m.authMethod == 0 {
+				if m.activeField == 0 {
+					m.login += string(msg.Runes)
+				} else {
+					m.password += string(msg.Runes)
+				}
 			}
-			return m, nil
-
-		case tea.KeyCtrlN:
-			m.registering = !m.registering
 			return m, nil
 
 		case tea.KeyEsc, tea.KeyCtrlC:
@@ -96,33 +95,57 @@ func (m *AuthModel) View() string {
 	sb.WriteString(ui.TitleStyle.Render("Морской Бой"))
 	sb.WriteString("\n\n")
 
-	if m.registering {
-		sb.WriteString("Регистрация\n\n")
+	authTab := "Авторизация"
+	regTab := "Регистрация"
+	if m.activeTab == 0 {
+		authTab = ui.SelectedStyle.Render(authTab)
+		regTab = ui.NormalStyle.Render(regTab)
 	} else {
-		sb.WriteString("Авторизация\n\n")
+		authTab = ui.NormalStyle.Render(authTab)
+		regTab = ui.SelectedStyle.Render(regTab)
 	}
+	sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, authTab, " | ", regTab))
+	sb.WriteString("\n\n")
 
-	loginLabel := "Логин: "
-	if m.activeField == 0 {
-		sb.WriteString(ui.SelectedStyle.Render(loginLabel))
-	} else {
-		sb.WriteString(ui.NormalStyle.Render(loginLabel))
+	methods := []string{"Логин/Пароль", "Google", "Яндекс"}
+	for i, method := range methods {
+		if i == m.authMethod {
+			sb.WriteString(ui.SelectedStyle.Render("[" + method + "]"))
+		} else {
+			sb.WriteString(ui.NormalStyle.Render(method + " "))
+		}
 	}
-	sb.WriteString(m.login)
-	if m.activeField == 0 {
-		sb.WriteString("_")
-	}
-	sb.WriteString("\n")
+	sb.WriteString("\n\n")
 
-	passwordLabel := "Пароль: "
-	if m.activeField == 1 {
-		sb.WriteString(ui.SelectedStyle.Render(passwordLabel))
+	if m.authMethod == 0 {
+		loginLabel := "Логин: "
+		if m.activeField == 0 {
+			sb.WriteString(ui.SelectedStyle.Render(loginLabel))
+		} else {
+			sb.WriteString(ui.NormalStyle.Render(loginLabel))
+		}
+		sb.WriteString(m.login)
+		if m.activeField == 0 {
+			sb.WriteString("_")
+		}
+		sb.WriteString("\n")
+
+		passwordLabel := "Пароль: "
+		if m.activeField == 1 {
+			sb.WriteString(ui.SelectedStyle.Render(passwordLabel))
+		} else {
+			sb.WriteString(ui.NormalStyle.Render(passwordLabel))
+		}
+		sb.WriteString(strings.Repeat("*", len(m.password)))
+		if m.activeField == 1 {
+			sb.WriteString("_")
+		}
 	} else {
-		sb.WriteString(ui.NormalStyle.Render(passwordLabel))
-	}
-	sb.WriteString(strings.Repeat("*", len(m.password)))
-	if m.activeField == 1 {
-		sb.WriteString("_")
+		provider := "Google"
+		if m.authMethod == 2 {
+			provider = "Яндекс"
+		}
+		sb.WriteString(fmt.Sprintf("Для входа через %s нажмите Enter", provider))
 	}
 	sb.WriteString("\n")
 
@@ -130,8 +153,50 @@ func (m *AuthModel) View() string {
 		sb.WriteString(ui.ErrorStyle.Render(m.errorMsg + "\n"))
 	}
 
-	sb.WriteString(ui.NormalStyle.Render("\nTab - переключение полей, Enter - подтвердить"))
-	sb.WriteString(ui.NormalStyle.Render("\nCtrl+N - переключить регистрацию/авторизацию, Esc/Ctrl+C - выход\n"))
+	sb.WriteString(ui.NormalStyle.Render("\nTab - Авторизация/Регистрация, ←/→ - выбор метода, Enter - подтвердить"))
+	sb.WriteString(ui.NormalStyle.Render("\n↑/↓ - переключение полей, Esc/Ctrl+C - выход\n"))
 
 	return sb.String()
+}
+
+func (m *AuthModel) handleEnter() (tea.Model, tea.Cmd) {
+	// Логин/пароль
+	if m.authMethod == 0 {
+		if m.activeField == 0 {
+			m.activeField = 1
+			return m, nil
+		}
+
+		if m.activeTab == 0 {
+			if m.login == "" || m.password == "" {
+				m.errorMsg = "Введите логин и пароль"
+				return m, nil
+			}
+			return m, func() tea.Msg {
+				return AuthSuccessMsg{
+					Username: m.login,
+					Gold:     500,
+				}
+			}
+		} else {
+			if len(m.login) < 3 || len(m.password) < 6 {
+				m.errorMsg = "Логин минимум 3 символа, пароль - 6"
+				return m, nil
+			}
+			return m, func() tea.Msg {
+				return AuthSuccessMsg{
+					Username: m.login,
+					Gold:     1000,
+				}
+			}
+		}
+	}
+
+	provider := []string{"", "google", "yandex"}[m.authMethod]
+	return NewOAuthModel(m, provider, m.activeTab == 0), func() tea.Msg {
+		return OAuthStartMsg{
+			Provider: provider,
+			IsLogin:  m.activeTab == 0,
+		}
+	}
 }
