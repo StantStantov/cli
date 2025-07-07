@@ -2,22 +2,22 @@ package auth
 
 // Константы путей API
 const (
-	LoginPath        = "/api/v1/auth/login"
+	LoginPath        = "/api/v1/auth/login/"
 	GoogleInitPath   = "/api/v1/auth/google/device/init"
 	GoogleCheckPath  = "/api/v1/auth/google/device/check"
 	YandexInitPath   = "/api/v1/auth/yandex/device/init"
 	YandexCheckPath  = "/api/v1/auth/yandex/device/check"
-	RefreshTokenPath = "/api/v1/auth/refresh"
-	ProfilePath      = "/api/v1/users/me"
-	LogoutPath       = "/api/v1/auth/logout"
-	UpdateUserPath   = "/api/v1/users/me"
-	DeleteUserPath   = "/api/v1/users/me"
+	GetProfilePath   = "/api/v1/users/%d"
+	RefreshTokenPath = "/api/v1/auth/refresh_token/"
+	UpdateUserPath   = "/api/v1/users/%d"
+	DeleteUserPath   = "/api/v1/users/%d"
+	LogoutPath       = "/api/v1/users/logout/"
 	RegistrationPath = "/api/v1/auth/registration/"
 )
 
 // UserRegRequest - запрос на регистрацию пользователя
 type UserRegRequest struct {
-	Email    string `json:"email,omitempty"`
+	Email    string `json:"email"`
 	Name     string `json:"name,omitempty"`
 	Surname  string `json:"surname,omitempty"`
 	Username string `json:"username"`
@@ -57,7 +57,7 @@ type DeviceAuthResponse struct {
 	UserCode        string `json:"user_code"`          // код для пользователя
 	DeviceCode      string `json:"device_code"`        // код устройства
 	VerificationURL string `json:"verification_url"`   // предпочтительный URL для верификации
-	VerificationURI string `json:"verification_uri"`   // альтернативное название (для совместимости)
+	VerificationURI string `json:"verification_uri"`   // альтернативное название (для совместимости, ибо у ребят там uri был)
 	ExpiresIn       int    `json:"expires_in"`         // время жизни кода (сек)
 	Interval        int    `json:"interval,omitempty"` // интервал опроса (сек)
 }
