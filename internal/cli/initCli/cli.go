@@ -1,0 +1,110 @@
+package initCli
+
+import (
+	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"lesta-start-battleship/cli/internal/cli/models"
+)
+
+type CLI struct {
+	currentScreen tea.Model
+	chatComponent *models.ChatComponent
+	authToken     string
+	userID        string
+	username      string
+}
+
+func NewCLI() *CLI {
+	return &CLI{
+		currentScreen: models.NewAuthModel(),
+		chatComponent: models.NewChatComponent("", 0),
+	}
+}
+
+func (a *CLI) Init() tea.Cmd {
+	return nil
+}
+
+func (a *CLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		if keyMsg.Type == tea.KeyEsc && a.chatComponent.IsVisible() && a.chatComponent.Focused {
+			a.chatComponent.Close()
+			return a, nil
+		}
+	}
+
+	switch msg := msg.(type) {
+	case models.ChatKeyHandledMsg:
+		return a, nil
+
+	case models.AuthSuccessMsg:
+		a.authToken = msg.Token
+		a.username = msg.Username
+		a.currentScreen = models.NewMainMenuModel(a.username)
+		a.chatComponent = models.NewChatComponent(a.username, 1)
+		return a, nil
+
+	case models.LogoutMsg:
+		a.authToken = ""
+		a.username = ""
+		a.currentScreen = models.NewAuthModel()
+		a.chatComponent.Close()
+		a.chatComponent = models.NewChatComponent("", 0)
+		return a, nil
+
+	case models.UsernameChangeMsg:
+		a.username = msg.NewUsername
+		a.chatComponent.Username = msg.NewUsername
+		return a, nil
+
+	case models.OpenChatMsg:
+		a.chatComponent.Toggle()
+		if a.chatComponent.IsVisible() {
+			return a, a.chatComponent.Init()
+		}
+		return a, nil
+
+	case tea.KeyMsg:
+		if msg.Type == tea.KeyCtrlC {
+			return a, tea.Quit
+		}
+
+		if msg.Type == tea.KeyCtrlG && a.chatComponent.IsVisible() {
+			a.chatComponent.Focused = !a.chatComponent.Focused
+			return a, nil
+		}
+	}
+
+	var chatCmd tea.Cmd
+	if a.chatComponent.IsVisible() {
+		var updatedChat tea.Model
+		updatedChat, chatCmd = a.chatComponent.Update(msg)
+		if updatedChat != nil {
+			a.chatComponent = updatedChat.(*models.ChatComponent)
+		}
+
+		if a.chatComponent.Focused {
+			return a, chatCmd
+		}
+	}
+
+	var mainCmd tea.Cmd
+	a.currentScreen, mainCmd = a.currentScreen.Update(msg)
+
+	return a, tea.Batch(mainCmd, chatCmd)
+}
+
+func (a *CLI) View() string {
+	mainView := a.currentScreen.View()
+
+	if a.chatComponent.IsVisible() {
+		chatView := a.chatComponent.View()
+		return lipgloss.JoinHorizontal(
+			lipgloss.Top,
+			lipgloss.NewStyle().Width(100).Render(mainView),
+			chatView,
+		)
+	}
+
+	return mainView
+}
