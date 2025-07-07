@@ -12,7 +12,17 @@ const (
 	LogoutPath       = "/api/v1/auth/logout"
 	UpdateUserPath   = "/api/v1/users/me"
 	DeleteUserPath   = "/api/v1/users/me"
+	RegistrationPath = "/api/v1/auth/registration/"
 )
+
+// UserRegRequest - запрос на регистрацию пользователя
+type UserRegRequest struct {
+	Email    string `json:"email,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Surname  string `json:"surname,omitempty"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
 
 // LoginRequest - запрос на вход с логином и паролем
 type LoginRequest struct {

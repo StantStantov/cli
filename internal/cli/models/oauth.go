@@ -3,28 +3,32 @@ package models
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	authapi "lesta-start-battleship/cli/internal/api/auth"
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"strings"
 )
 
+const ()
+
 type OAuthModel struct {
-	parent   tea.Model
-	provider string // "google" или "yandex"
-	isLogin  bool
-	oauthURI string
-	status   string // "waiting", "success", "error"
-	username string
-	gold     int
-	errorMsg string
+	parent     tea.Model
+	provider   string // "google" или "yandex"
+	oauthURI   string
+	deviceCode string // Для реального OAuth, здесь будет код устройства
+	status     string // "waiting", "success", "error"
+	username   string
+	gold       int
+	errorMsg   string
+	authClient *authapi.Client
 }
 
-func NewOAuthModel(parent tea.Model, provider string, isLogin bool) *OAuthModel {
+func NewOAuthModel(parent tea.Model, provider string, authClient *authapi.Client, oauthURL, deviceCode string) *OAuthModel {
 	return &OAuthModel{
-		parent:   parent,
-		provider: provider,
-		isLogin:  isLogin,
-		status:   "waiting",
-		oauthURI: fmt.Sprintf("http://api.example.com/oauth/%s?cli=true", provider),
+		parent:     parent,
+		provider:   provider,
+		status:     "waiting",
+		oauthURI:   oauthURL,
+		authClient: authClient,
 	}
 }
 
@@ -68,11 +72,7 @@ func (m *OAuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *OAuthModel) View() string {
 	var sb strings.Builder
 
-	sb.WriteString(ui.TitleStyle.Render(fmt.Sprintf(
-		"%s через %s",
-		map[bool]string{true: "Авторизация", false: "Регистрация"}[m.isLogin],
-		strings.Title(m.provider),
-	)))
+	sb.WriteString(ui.TitleStyle.Render(fmt.Sprintf("Авторизация через %s", strings.Title(m.provider))))
 	sb.WriteString("\n\n")
 
 	switch m.status {

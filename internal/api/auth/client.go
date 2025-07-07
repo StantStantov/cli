@@ -87,19 +87,48 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 	return io.ReadAll(resp.Body)
 }
 
-// Login - вход по логину и паролю
-func (c *Client) Login(ctx context.Context, req LoginRequest) (*TokenResponse, error) {
-	body, err := c.doRequest(ctx, "POST", LoginPath, req)
+// Register - регистрация нового пользователя
+func (c Client) Register(ctx context.Context, req UserRegRequest) (*TokenResponse, *ProfileResponse, error) {
+	body, err := c.doRequest(ctx, "POST", RegistrationPath, req)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка входа: %w", err)
+		return nil, nil, fmt.Errorf("ошибка регистрации: %w", err)
 	}
 
 	var resp TokenResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
-		return nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
+		return nil, nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
+	}
+
+	// установка токенов в клиент
+	c.SetTokens(resp.AccessToken, resp.RefreshToken)
+
+	profile, err := c.GetProfile(ctx)
+	if err == nil {
+		c.userID = profile.ID
+	}
+
+	return &resp, profile, nil
+}
+
+// Login - вход по логину и паролю
+func (c *Client) Login(ctx context.Context, req LoginRequest) (*TokenResponse, *ProfileResponse, error) {
+	body, err := c.doRequest(ctx, "POST", LoginPath, req)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ошибка входа: %w", err)
+	}
+
+	var resp TokenResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
 	}
 	c.SetTokens(resp.AccessToken, resp.RefreshToken)
-	return &resp, nil
+
+	profile, err := c.GetProfile(ctx)
+	if err == nil {
+		c.userID = profile.ID
+	}
+
+	return &resp, profile, nil
 }
 
 // RefreshToken - обновление access token с помощью refresh token
