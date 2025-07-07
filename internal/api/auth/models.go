@@ -57,7 +57,7 @@ type DeviceAuthResponse struct {
 	UserCode        string `json:"user_code"`          // код для пользователя
 	DeviceCode      string `json:"device_code"`        // код устройства
 	VerificationURL string `json:"verification_url"`   // предпочтительный URL для верификации
-	VerificationURI string `json:"verification_uri"`   // альтернативное название (для совместимости)
+	VerificationURI string `json:"verification_uri"`   // альтернативное название (для совместимости, ибо у ребят там uri был)
 	ExpiresIn       int    `json:"expires_in"`         // время жизни кода (сек)
 	Interval        int    `json:"interval,omitempty"` // интервал опроса (сек)
 }

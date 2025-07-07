@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"time"
 )
@@ -23,10 +22,6 @@ type Client struct {
 
 // NewClient - создание клиента для работы с API
 func NewClient(baseURL string) (*Client, error) {
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		return nil, fmt.Errorf("не удалось создать cookie jar: %w", err)
-	}
 
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
@@ -36,7 +31,6 @@ func NewClient(baseURL string) (*Client, error) {
 	return &Client{
 		baseURL: parsedURL,
 		httpClient: &http.Client{
-			Jar:     jar,
 			Timeout: 15 * time.Second,
 		},
 	}, nil
@@ -123,15 +117,15 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 }
 
 // Register - регистрация нового пользователя
-func (c *Client) Register(ctx context.Context, req UserRegRequest) (*TokenResponse, error) {
+func (c *Client) Register(ctx context.Context, req UserRegRequest) (*TokenResponse, *ProfileResponse, error) {
 	body, err := c.doRequest(ctx, "POST", RegistrationPath, req)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка регистрации: %w", err)
+		return nil, nil, fmt.Errorf("ошибка регистрации: %w", err)
 	}
 
 	var resp TokenResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
-		return nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
+		return nil, nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
 	}
 
 	// установка токенов в клиент
@@ -142,19 +136,19 @@ func (c *Client) Register(ctx context.Context, req UserRegRequest) (*TokenRespon
 		c.userID = profile.ID
 	}
 
-	return &resp, nil
+	return &resp, profile, nil
 }
 
 // Login - вход по логину и паролю
-func (c *Client) Login(ctx context.Context, req LoginRequest) (*TokenResponse, error) {
+func (c *Client) Login(ctx context.Context, req LoginRequest) (*TokenResponse, *ProfileResponse, error) {
 	body, err := c.doRequest(ctx, "POST", LoginPath, req)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка входа: %w", err)
+		return nil, nil, fmt.Errorf("ошибка входа: %w", err)
 	}
 
 	var resp TokenResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
-		return nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
+		return nil, nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
 	}
 
 	// установка токенов в клиент
@@ -165,7 +159,7 @@ func (c *Client) Login(ctx context.Context, req LoginRequest) (*TokenResponse, e
 		c.userID = profile.ID
 	}
 
-	return &resp, nil
+	return &resp, profile, nil
 }
 
 // RefreshToken - обновление access token с помощью refresh token
@@ -414,5 +408,4 @@ func (c *Client) clearSession() {
 	c.accessToken = ""
 	c.refreshToken = ""
 	c.userID = 0
-	c.httpClient.Jar, _ = cookiejar.New(nil) // очистка куки
 }

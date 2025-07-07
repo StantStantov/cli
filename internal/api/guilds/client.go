@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"strconv"
 	"time"
@@ -27,15 +26,9 @@ func NewClient(baseURL string) (*Client, error) {
 		return nil, fmt.Errorf("invalid base URL: %w", err)
 	}
 
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cookie jar: %w", err)
-	}
-
 	return &Client{
 		baseURL: parsedURL,
 		httpClient: &http.Client{
-			Jar:     jar,
 			Timeout: 15 * time.Second,
 		},
 	}, nil
