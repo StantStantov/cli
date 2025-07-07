@@ -6,9 +6,10 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.5
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/lesta-battleship/server-core v1.0.0
 )
 
-replace github.com/lesta-battleship/server-core => github.com/lesta-start-battleship/server-core v0.1.1
+replace github.com/lesta-battleship/server-core => github.com/lesta-start-battleship/server-core v1.0.0
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
