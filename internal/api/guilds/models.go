@@ -1,5 +1,7 @@
 package guilds
 
+import "time"
+
 // константы путей API
 const (
 	PathGetMemberByUserID = "/api/v1/guild/member/member/%d"
@@ -14,6 +16,10 @@ const (
 	PathDeleteMember      = "/api/v1/guild/member/%s/%d"
 	PathEditMember        = "/api/v1/guild/member/%s/%d"
 	PathExitGuild         = "/api/v1/guild/member/%s/exit/%d"
+	PathDeclareWar        = "/api/v1/guild/war/declare"
+	PathConfirmWar        = "/api/v1/guild/war/confirm/%d"
+	PathCancelWar         = "/api/v1/guild/war/cancel/%d"
+	PathListGuildWars     = "/api/v1/guild/war/list"
 	PathGetGuilds         = "/api/v1/guild/"
 )
 
@@ -121,4 +127,83 @@ type CreateGuildRequest struct {
 type EditMemberRequest struct {
 	RoleID   int    `json:"role_id"`   // id новой роли
 	UserName string `json:"user_name"` // Новое имя (опционально)
+}
+
+// WarStatus - статус войны гильдий
+type WarStatus string
+
+const (
+	WarStatusPending  WarStatus = "pending"
+	WarStatusActive   WarStatus = "active"
+	WarStatusFinished WarStatus = "finished"
+	WarStatusDeclined WarStatus = "declined"
+	WarStatusCanceled WarStatus = "canceled"
+	WarStatusExpired  WarStatus = "expired"
+)
+
+// DeclareWarRequest - запрос на объявление войны
+type DeclareWarRequest struct {
+	InitiatorGuildID int `json:"initiator_guild_id"`
+	TargetGuildID    int `json:"target_guild_id"`
+	InitiatorOwnerID int `json:"initiator_owner_id"`
+}
+
+// DeclareWarResponse - ответ на объявление войны
+type DeclareWarResponse struct {
+	WarID            int       `json:"war_id"`
+	InitiatorGuildID int       `json:"initiator_guild_id"`
+	TargetGuildID    int       `json:"target_guild_id"`
+	Status           WarStatus `json:"status"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+// ConfirmWarRequest - запрос на подтверждение участия в войне
+type ConfirmWarRequest struct {
+	TargetOwnerID int `json:"target_owner_id"`
+}
+
+// ConfirmWarResponse - ответ на подтверждение участия в войне
+type ConfirmWarResponse struct {
+	WarID            int       `json:"war_id"`
+	InitiatorGuildID int       `json:"initiator_guild_id"`
+	TargetGuildID    int       `json:"target_guild_id"`
+	Status           WarStatus `json:"status"`
+	UpdatedAt        time.Time `json:"updated_at"`
+	InitiatorOwnerID int       `json:"initiator_owner_id"`
+	TargetOwnerID    int       `json:"target_owner_id"`
+}
+
+// CancelWarRequest - запрос на отмену участия в войне
+type CancelWarRequest struct {
+	OwnerID int `json:"owner_id"`
+}
+
+// CancelWarResponse - ответ на отмену участия в войне
+type CancelWarResponse struct {
+	WarID            int       `json:"war_id"`
+	Status           WarStatus `json:"status"`
+	CancelledBy      int       `json:"cancelled_by"`
+	CancelledAt      time.Time `json:"cancelled_at"`
+	InitiatorGuildID int       `json:"initiator_guild_id"`
+	TargetGuildID    int       `json:"target_guild_id"`
+	InitiatorOwnerID int       `json:"initiator_owner_id"`
+	TargetOwnerID    int       `json:"target_owner_id"`
+}
+
+// GuildWarItem - элементы списка войн гильдий
+type GuildWarItem struct {
+	ID               int       `json:"id"`
+	InitiatorGuildID int       `json:"initiator_guild_id"`
+	TargetGuildID    int       `json:"target_guild_id"`
+	Status           WarStatus `json:"status"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+// GuildWarListResponse - ответ со списком войн гильдий
+type GuildWarListResponse struct {
+	Page       int            `json:"page"`
+	PageSize   int            `json:"page_size"`
+	Total      int            `json:"total"`
+	TotalPages int            `json:"total_pages"`
+	Results    []GuildWarItem `json:"results"`
 }

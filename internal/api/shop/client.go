@@ -174,7 +174,8 @@ func (c *Client) GetUserPurchases(ctx context.Context) ([]Purchase, error) {
 	return nil, fmt.Errorf("not implemented yet")
 }
 
-// TODO: GetPromotionDetails - получить детали акции ( GET /promotion/{id}/ )
+// TODO:
+//  GetPromotionDetails - получить детали акции ( GET /promotion/{id}/ )
 //  Вернет полную информацию о конкретной акции на её странице
 
 func (c *Client) GetPromotionDetails(ctx context.Context, promotionID int) (*Promotion, error) {

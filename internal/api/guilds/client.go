@@ -47,11 +47,15 @@ func (c *Client) doRequest(
 	body interface{},
 ) ([]byte, error) {
 	reqURL := c.baseURL.ResolveReference(&url.URL{Path: path})
-	q := reqURL.Query()
-	for k, v := range queryParams {
-		q.Add(k, v)
+
+	// добавление query-параметров
+	if queryParams != nil {
+		q := reqURL.Query()
+		for k, v := range queryParams {
+			q.Add(k, v)
+		}
+		reqURL.RawQuery = q.Encode()
 	}
-	reqURL.RawQuery = q.Encode()
 
 	var buf bytes.Buffer
 	if body != nil {
@@ -66,7 +70,6 @@ func (c *Client) doRequest(
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "SeaBattle-CLI/1.0")
 	if c.accessToken != "" {
 		req.Header.Set("Authorization", "Bearer "+c.accessToken)
 	}
@@ -240,4 +243,118 @@ func (c *Client) ExitGuild(ctx context.Context, tag string, userID int) error {
 	path := fmt.Sprintf(PathExitGuild, tag, userID)
 	_, err := c.doRequest(ctx, "DELETE", path, nil, nil)
 	return err
+}
+
+// DeclareWar - объявление войны другой гильдии (вызвать может только владелец гильдии-инициатора)
+func (c *Client) DeclareWar(
+	ctx context.Context,
+	initiatorGuildID int,
+	targetGuildID int,
+	ownerID int,
+) (*DeclareWarResponse, error) {
+	reqBody := DeclareWarRequest{
+		InitiatorGuildID: initiatorGuildID,
+		TargetGuildID:    targetGuildID,
+		InitiatorOwnerID: ownerID,
+	}
+
+	body, err := c.doRequest(ctx, "POST", PathDeclareWar, nil, reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp DeclareWarResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+// ConfirmWar - подтверждение войны гильдией, которую вызывают (вызвать может только владелец гильдии-цели)
+func (c *Client) ConfirmWar(
+	ctx context.Context,
+	warID int,
+	targetOwnerID int,
+) (*ConfirmWarResponse, error) {
+	path := fmt.Sprintf(PathConfirmWar, warID)
+	reqBody := ConfirmWarRequest{TargetOwnerID: targetOwnerID}
+
+	body, err := c.doRequest(ctx, "POST", path, nil, reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp ConfirmWarResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+// CancelWar - отменяет активную или войну в статусе ожидания (вызвать может владелец гильдии-участника с любой стороны)
+func (c *Client) CancelWar(
+	ctx context.Context,
+	warID int,
+	ownerID int,
+) (*CancelWarResponse, error) {
+	path := fmt.Sprintf(PathCancelWar, warID)
+	reqBody := CancelWarRequest{OwnerID: ownerID}
+
+	body, err := c.doRequest(ctx, "POST", path, nil, reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp CancelWarResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+// GetGuildWarList - получить список войн гильдии с фильтрами
+func (c *Client) GetGuildWarList(
+	ctx context.Context,
+	userID int,
+	guildID int,
+	isInitiator *bool,
+	isTarget *bool,
+	status *WarStatus,
+	page int,
+	pageSize int,
+) (*GuildWarListResponse, error) {
+
+	// параметры запроса
+	params := map[string]string{
+		"user_id":   strconv.Itoa(userID),
+		"guild_id":  strconv.Itoa(guildID),
+		"page":      strconv.Itoa(page),
+		"page_size": strconv.Itoa(pageSize),
+	}
+
+	// опциональные параметры
+	if isInitiator != nil {
+		params["is_initiator"] = strconv.FormatBool(*isInitiator)
+	}
+	if isTarget != nil {
+		params["is_target"] = strconv.FormatBool(*isTarget)
+	}
+	if status != nil {
+		params["status"] = string(*status)
+	}
+
+	body, err := c.doRequest(ctx, "GET", PathListGuildWars, params, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response GuildWarListResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, err
+	}
+
+	return &response, nil
 }
