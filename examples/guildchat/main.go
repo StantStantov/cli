@@ -14,18 +14,15 @@ import (
 	"os/signal"
 )
 
-var (
-	pathFlag  = flag.String("url", "ws://localhost:8080", "URL to connect to")
-)
+var pathFlag = flag.String("url", "ws://localhost:8080", "URL to connect to")
 
 func main() {
 	flag.Parse()
 
-	client := websocket.NewWebsocketClient(strategies.GuildChatStrategy{})
-
 	u := *pathFlag
 	log.Printf("Connecting to %s", u)
-	if err := client.Connect(u, nil); err != nil {
+	client, err := websocket.NewWebsocketClient(u, nil, strategies.GuildChatStrategy{})
+	if err != nil {
 		return
 	}
 	go client.ReadPump()
