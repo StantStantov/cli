@@ -4,20 +4,23 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"lesta-start-battleship/cli/internal/cli/models"
+	"lesta-start-battleship/cli/internal/clientdeps"
 )
 
 type CLI struct {
 	currentScreen tea.Model
 	chatComponent *models.ChatComponent
+	clients       *clientdeps.Client
 	gold          int
 	userID        string
 	username      string
 }
 
-func NewCLI() *CLI {
+func NewCLI(clients *clientdeps.Client) *CLI {
 	return &CLI{
-		currentScreen: models.NewAuthModel(),
+		currentScreen: models.NewAuthModel(clients),
 		chatComponent: models.NewChatComponent("", 0),
+		clients:       clients,
 	}
 }
 
@@ -40,20 +43,22 @@ func (a *CLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case models.AuthSuccessMsg:
 		a.gold = msg.Gold
 		a.username = msg.Username
-		a.currentScreen = models.NewMainMenuModel(a.username)
+		a.currentScreen = models.NewMainMenuModel(a.username, a.gold, a.clients)
 		a.chatComponent = models.NewChatComponent(a.username, 1)
 		return a, nil
 
 	case models.LogoutMsg:
+
 		a.gold = 0
 		a.username = ""
-		a.currentScreen = models.NewAuthModel()
+		a.currentScreen = models.NewAuthModel(a.clients)
 		a.chatComponent.Close()
 		a.chatComponent = models.NewChatComponent("", 0)
 		return a, nil
 
 	case models.UsernameChangeMsg:
 		a.username = msg.NewUsername
+		a.gold = msg.Gold
 		a.chatComponent.Username = msg.NewUsername
 		return a, nil
 

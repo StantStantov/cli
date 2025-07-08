@@ -1,14 +1,18 @@
 package models
 
 import (
+	"context"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
-	authapi "lesta-start-battleship/cli/internal/api/auth"
 	"lesta-start-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/clientdeps"
 	"strings"
 )
 
-const ()
+const (
+	expiresInSeconds = 600
+	intervalSeconds  = 5
+)
 
 type OAuthModel struct {
 	parent     tea.Model
@@ -19,16 +23,17 @@ type OAuthModel struct {
 	username   string
 	gold       int
 	errorMsg   string
-	authClient *authapi.Client
+	Clients    *clientdeps.Client
 }
 
-func NewOAuthModel(parent tea.Model, provider string, authClient *authapi.Client, oauthURL, deviceCode string) *OAuthModel {
+func NewOAuthModel(parent tea.Model, provider string, client *clientdeps.Client, oauthURL, deviceCode string) *OAuthModel {
 	return &OAuthModel{
 		parent:     parent,
 		provider:   provider,
 		status:     "waiting",
 		oauthURI:   oauthURL,
-		authClient: authClient,
+		deviceCode: deviceCode,
+		Clients:    client,
 	}
 }
 
@@ -41,10 +46,25 @@ func (m *OAuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
+			/*switch m.status {
+			case "waiting", "error":
+				m.status = "pending"
+				m.errorMsg = ""
+				return m, m.pollingOAuth()
+			case "success":
+				return NewMainMenuModel(m.username, m.gold), nil
+			case "pending":
+				return m, nil
+			}*/
 			if m.status == "waiting" {
 				// В реальности здесь будет API запрос
-				// Сейчас просто ручной ввод результата
-				return m, nil
+				// Сейчас просто ручной ввод
+				//m.status = "pending"
+				m.errorMsg = ""
+
+				return m, func() tea.Msg { return OAuthPollingResultMsg{Error: "Пользователь не найден"} } // Здесь будет реальный результат
+			} else if m.status == "error" {
+				return NewMainMenuModel(m.username, m.gold, m.Clients), nil
 			}
 			// После успеха/ошибки Enter возвращает в родительское меню
 			return m.parent, nil
@@ -53,16 +73,15 @@ func (m *OAuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.parent, nil
 		}
 
-	// Ручное управление результатом (для тестов)
-	case OAuthTestSuccessMsg:
+	case OAuthPollingResultMsg:
+		if msg.Error != "" {
+			m.status = "error"
+			m.errorMsg = msg.Error
+			return m, nil
+		}
 		m.status = "success"
 		m.username = msg.Username
 		m.gold = msg.Gold
-		return m, nil
-
-	case OAuthTestErrorMsg:
-		m.status = "error"
-		m.errorMsg = msg.Error
 		return m, nil
 	}
 
@@ -77,11 +96,16 @@ func (m *OAuthModel) View() string {
 
 	switch m.status {
 	case "waiting":
-		sb.WriteString("1. Скопируйте ссыку:\n")
+		sb.WriteString("1. Скопируйте ссылку:\n")
 		sb.WriteString(ui.AlertStyle.Render(m.oauthURI))
 		sb.WriteString("\n\n2. Откройте её в браузере\n\n")
+		sb.WriteString(fmt.Sprintf("3. Введите код устройства: %s\n\n", m.deviceCode))
 		sb.WriteString("3. После авторизации нажмите Enter для проверки\n\n")
 		sb.WriteString(ui.HelpStyle.Render("Enter - проверить, Esc - отмена"))
+
+	case "pending":
+		sb.WriteString("Ожидание подтверждения авторизации...\n")
+		sb.WriteString(ui.HelpStyle.Render("Esc - отмены"))
 
 	case "success":
 		sb.WriteString(ui.SuccessStyle.Render("Успешная авторизация!\n\n"))
@@ -90,20 +114,20 @@ func (m *OAuthModel) View() string {
 		sb.WriteString(ui.HelpStyle.Render("Нажмите Enter чтобы продолжить"))
 
 	case "error":
-		sb.WriteString(ui.ErrorStyle.Render("Ошибка:\n"))
-		sb.WriteString(m.errorMsg + "\n\n")
-		sb.WriteString(ui.HelpStyle.Render("Нажмите Enter чтобы повторить"))
+		sb.WriteString(ui.ErrorStyle.Render(fmt.Sprintf("Ошибка: %s\n\n", m.errorMsg)))
+		sb.WriteString(ui.HelpStyle.Render("Enter - повторить, Esc - назад"))
 	}
 
 	return sb.String()
 }
 
-// Тестовые сообщения для ручного управления
-type OAuthTestSuccessMsg struct {
-	Username string
-	Gold     int
-}
-
-type OAuthTestErrorMsg struct {
-	Error string
+func (m *OAuthModel) pollingOAuth() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		_, profile, err := m.Clients.AuthClient.CompleteOAuthPolling(ctx, m.provider, m.deviceCode, expiresInSeconds, intervalSeconds)
+		if err != nil {
+			return OAuthPollingResultMsg{Error: err.Error()}
+		}
+		return OAuthPollingResultMsg{Username: profile.Username, Gold: profile.Currency.Gold}
+	}
 }

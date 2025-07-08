@@ -5,23 +5,28 @@ import (
 	"github.com/charmbracelet/bubbletea"
 	"lesta-start-battleship/cli/internal/cli/handlers"
 	"lesta-start-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/clientdeps"
 	"strings"
 )
 
 type ShopModel struct {
 	username string
+	gold     int
 	items    handlers.ShopResponse
 	selected int
 	category int // 0-предметы, 1-акции, 2-сундуки
 	err      error
+	Clients  *clientdeps.Client
 }
 
-func NewShopModel(username string, items handlers.ShopResponse) *ShopModel {
+func NewShopModel(username string, gold int, items handlers.ShopResponse, clients *clientdeps.Client) *ShopModel {
 	return &ShopModel{
 		username: username,
+		gold:     gold,
 		items:    items,
 		selected: 0,
 		category: 0,
+		Clients:  clients,
 	}
 }
 
@@ -67,7 +72,7 @@ func (m *ShopModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewMainMenuModel(m.username), nil
+			return NewMainMenuModel(m.username, m.gold, m.Clients), nil
 		}
 	}
 	return m, nil

@@ -3,24 +3,29 @@ package models
 import (
 	"fmt"
 	"github.com/charmbracelet/bubbletea"
-	"lesta-start-battleship/cli/internal/cli/handlers"
+	"lesta-start-battleship/cli/internal/api/inventory"
 	"lesta-start-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/clientdeps"
 	"strings"
 )
 
 type InventoryModel struct {
 	username    string
-	items       handlers.InventoryResponse
+	gold        int
+	items       *inventory.UserInventoryResponse
 	selected    int
 	showDetails bool
+	Clients     *clientdeps.Client
 }
 
-func NewInventoryModel(username string, items handlers.InventoryResponse) *InventoryModel {
+func NewInventoryModel(username string, gold int, items *inventory.UserInventoryResponse, clients *clientdeps.Client) *InventoryModel {
 	return &InventoryModel{
 		username:    username,
+		gold:        gold,
 		items:       items,
 		selected:    0,
 		showDetails: false,
+		Clients:     clients,
 	}
 }
 
@@ -33,19 +38,19 @@ func (m *InventoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyUp:
-			if !m.showDetails && len(m.items) > 0 {
-				m.selected = (m.selected - 1 + len(m.items)) % len(m.items)
+			if !m.showDetails && len(m.items.Items) > 0 {
+				m.selected = (m.selected - 1 + len(m.items.Items)) % len(m.items.Items)
 			}
 			return m, nil
 
 		case tea.KeyDown:
-			if !m.showDetails && len(m.items) > 0 {
-				m.selected = (m.selected + 1) % len(m.items)
+			if !m.showDetails && len(m.items.Items) > 0 {
+				m.selected = (m.selected + 1) % len(m.items.Items)
 			}
 			return m, nil
 
 		case tea.KeyEnter:
-			if len(m.items) > 0 && !m.showDetails {
+			if len(m.items.Items) > 0 && !m.showDetails {
 				m.showDetails = true
 			} else {
 				m.showDetails = false
@@ -53,7 +58,7 @@ func (m *InventoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewMainMenuModel(m.username), nil
+			return NewMainMenuModel(m.username, m.gold, m.Clients), nil
 
 		case tea.KeyCtrlC:
 			return m, tea.Quit
@@ -70,28 +75,28 @@ func (m *InventoryModel) View() string {
 	sb.WriteString(ui.NormalStyle.Render("Пользователь: " + m.username))
 	sb.WriteString("\n\n")
 
-	if len(m.items) == 0 {
+	if len(m.items.Items) == 0 {
 		sb.WriteString(ui.NormalStyle.Render("Инвентарь пуст"))
 		return sb.String()
 	}
 
 	if m.showDetails {
-		item := m.items[m.selected]
+		item := m.items.Items[m.selected]
 		sb.WriteString(ui.SelectedStyle.Render(item.Name))
 		sb.WriteString("\n\n")
 		sb.WriteString(ui.NormalStyle.Render("Количество: "))
-		sb.WriteString(ui.NormalStyle.Render(fmt.Sprintf("%d", item.Quantity)))
+		sb.WriteString(ui.NormalStyle.Render(fmt.Sprintf("%d", item.Amount)))
 		sb.WriteString("\n\n")
 		sb.WriteString(ui.NormalStyle.Render("Описание:\n"))
-		sb.WriteString(ui.NormalStyle.Render(item.ItemDescription))
+		sb.WriteString(ui.NormalStyle.Render(item.Description))
 	} else {
-		for i, item := range m.items {
+		for i, item := range m.items.Items {
 			if i == m.selected {
 				sb.WriteString(ui.SelectedStyle.Render("> " + item.Name))
-				sb.WriteString(ui.NormalStyle.Render(fmt.Sprintf(" (x%d)", item.Quantity)))
+				sb.WriteString(ui.NormalStyle.Render(fmt.Sprintf(" (x%d)", item.Amount)))
 			} else {
 				sb.WriteString(ui.NormalStyle.Render("  " + item.Name))
-				sb.WriteString(ui.NormalStyle.Render(fmt.Sprintf(" (x%d)", item.Quantity)))
+				sb.WriteString(ui.NormalStyle.Render(fmt.Sprintf(" (x%d)", item.Amount)))
 			}
 			sb.WriteString("\n")
 		}

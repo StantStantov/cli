@@ -1,9 +1,13 @@
 package models
 
 import (
+	"context"
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"lesta-start-battleship/cli/internal/api/inventory"
 	"lesta-start-battleship/cli/internal/cli/handlers"
 	"lesta-start-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/clientdeps"
 	"strings"
 )
 
@@ -11,12 +15,17 @@ type MainMenuModel struct {
 	username string
 	gold     int
 	selected int
+	errorMsg string
+	Clients  *clientdeps.Client
 }
 
-func NewMainMenuModel(username string) *MainMenuModel {
+func NewMainMenuModel(username string, gold int, clients *clientdeps.Client) *MainMenuModel {
 	return &MainMenuModel{
 		username: username,
+		gold:     gold,
 		selected: 0,
+		errorMsg: "",
+		Clients:  clients,
 	}
 }
 
@@ -47,30 +56,30 @@ func (m *MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case 3: // Гильдия
 				return m, m.loadHandler
 			case 4: // Редактирование профиля
-				return NewEditProfileModel(m.username), nil
+				return NewEditProfileModel(m.username, m.gold, m.Clients), nil
 			case 5: // Рейтинг
 				return m, m.loadHandler
 			}
 			return m, nil
 
 		case tea.KeyEsc:
-			return m, func() tea.Msg { return LogoutMsg{} }
+			return m, m.logoutHandler
 
 		case tea.KeyCtrlC:
 			return m, tea.Quit
 		}
 
-	case handlers.InventoryResponse:
-		return NewInventoryModel(m.username, msg), nil
+	case *inventory.UserInventoryResponse:
+		return NewInventoryModel(m.username, m.gold, msg, m.Clients), nil
 
 	case handlers.ShopResponse:
-		return NewShopModel(m.username, msg), nil
+		return NewShopModel(m.username, m.gold, msg, m.Clients), nil
 
 	case handlers.GuildResponse:
-		return NewGuildModel(m.username, msg), nil
+		return NewGuildModel(m.username, m.gold, msg, m.Clients), nil
 
 	case handlers.PlayerStats:
-		return NewScoreboardModel(m.username, msg), nil
+		return NewScoreboardModel(m.username, m.gold, msg, m.Clients), nil
 	}
 
 	return m, nil
@@ -102,6 +111,10 @@ func (m *MainMenuModel) View() string {
 		sb.WriteString("\n")
 	}
 
+	if m.errorMsg != "" {
+		sb.WriteString(ui.ErrorStyle.Render(m.errorMsg + "\n"))
+	}
+
 	sb.WriteString("\n")
 	sb.WriteString(ui.NormalStyle.Render("↑/↓ - выбор, Enter - подтвердить, Esc - выход"))
 
@@ -112,9 +125,11 @@ func (m *MainMenuModel) loadHandler() tea.Msg {
 	token := "dummy_token_" + m.username
 	switch m.selected {
 	case 1:
-		items, err := handlers.InventoryHandler(token)
+		ctx := context.Background()
+		items, err := m.Clients.InventoryClient.GetUserInventory(ctx)
 		if err != nil {
-			return err
+			m.errorMsg = fmt.Sprintf("%v", err)
+			return m
 		}
 		return items
 	case 2:
@@ -137,4 +152,14 @@ func (m *MainMenuModel) loadHandler() tea.Msg {
 		return stats
 	}
 	return nil
+}
+
+func (m *MainMenuModel) logoutHandler() tea.Msg {
+	ctx := context.Background()
+	err := m.Clients.AuthClient.Logout(ctx)
+	if err != nil {
+		m.errorMsg = err.Error()
+		return m
+	}
+	return LogoutMsg{}
 }

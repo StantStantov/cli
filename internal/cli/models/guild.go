@@ -5,21 +5,26 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"lesta-start-battleship/cli/internal/cli/handlers"
 	"lesta-start-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/clientdeps"
 	"strings"
 )
 
 type GuildModel struct {
 	username  string
+	gold      int
 	GuildInfo handlers.GuildResponse
 	selected  int
 	loading   bool
 	err       error
+	Clients   *clientdeps.Client
 }
 
-func NewGuildModel(username string, guildInfo handlers.GuildResponse) *GuildModel {
+func NewGuildModel(username string, gold int, guildInfo handlers.GuildResponse, clients *clientdeps.Client) *GuildModel {
 	return &GuildModel{
 		username:  username,
+		gold:      gold,
 		GuildInfo: guildInfo,
+		Clients:   clients,
 		//loading:  true,
 	}
 }
@@ -60,7 +65,7 @@ func (m *GuildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleMenuSelection()
 
 		case tea.KeyEsc:
-			return NewMainMenuModel(m.username), nil
+			return NewMainMenuModel(m.username, m.gold, m.Clients), nil
 		}
 	}
 
@@ -134,7 +139,7 @@ func (m *GuildModel) handleMenuSelection() (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "Создать гильдию":
-		return NewCreateGuildModel(m.username), nil
+		return NewCreateGuildModel(m.username, m.gold, m.Clients), nil
 	case "Вступить в гильдию":
 		return m, nil
 		//return NewJoinGuildModel(m.Username), nil

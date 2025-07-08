@@ -5,6 +5,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"lesta-start-battleship/cli/internal/cli/handlers"
 	"lesta-start-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/clientdeps"
 	"strings"
 )
 
@@ -14,6 +15,7 @@ const (
 
 type ScoreboardModel struct {
 	username     string
+	gold         int
 	activeTab    int // 0-моя, 1-игроки, 2-гильдия
 	myStats      handlers.PlayerStats
 	playersStats []handlers.PlayerStats
@@ -22,15 +24,18 @@ type ScoreboardModel struct {
 	currentPage  int
 	totalPages   int
 	tableWidth   int
+	Clients      *clientdeps.Client
 }
 
-func NewScoreboardModel(username string, myStats handlers.PlayerStats) *ScoreboardModel {
+func NewScoreboardModel(username string, gold int, myStats handlers.PlayerStats, clients *clientdeps.Client) *ScoreboardModel {
 	return &ScoreboardModel{
 		username:    username,
+		gold:        gold,
 		activeTab:   0,
 		myStats:     myStats,
 		currentPage: 1,
 		tableWidth:  80,
+		Clients:     clients,
 	}
 }
 
@@ -87,7 +92,7 @@ func (m *ScoreboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewMainMenuModel(m.username), nil
+			return NewMainMenuModel(m.username, m.gold, m.Clients), nil
 		}
 	}
 	return m, nil

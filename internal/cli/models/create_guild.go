@@ -4,20 +4,25 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"lesta-start-battleship/cli/internal/cli/handlers"
 	"lesta-start-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/clientdeps"
 	"strings"
 )
 
 type CreateGuildModel struct {
 	username    string
+	gold        int
 	name        string
 	tag         string
 	activeField int
 	errorMsg    string
+	Clients     *clientdeps.Client
 }
 
-func NewCreateGuildModel(username string) *CreateGuildModel {
+func NewCreateGuildModel(username string, gold int, clients *clientdeps.Client) *CreateGuildModel {
 	return &CreateGuildModel{
 		username: username,
+		gold:     gold,
+		Clients:  clients,
 	}
 }
 
@@ -32,7 +37,7 @@ func (m *CreateGuildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			if m.activeField == 1 {
 				//Заглушка для создания гильдии
-				return NewGuildModel(m.username, handlers.GuildResponse{
+				return NewGuildModel(m.username, m.gold, handlers.GuildResponse{
 					Member: true,
 					Owner:  true,
 					Info: handlers.GuildInfo{
@@ -40,7 +45,7 @@ func (m *CreateGuildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Name: m.name,
 						Tag:  m.tag,
 					},
-				}), nil
+				}, m.Clients), nil
 			}
 			m.activeField = (m.activeField + 1) % 2
 			return m, nil
@@ -62,7 +67,7 @@ func (m *CreateGuildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewGuildModel(m.username, handlers.GuildResponse{}), nil
+			return NewGuildModel(m.username, m.gold, handlers.GuildResponse{}, m.Clients), nil
 		}
 	}
 	return m, nil

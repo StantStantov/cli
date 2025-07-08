@@ -1,27 +1,35 @@
 package models
 
 import (
+	"context"
 	tea "github.com/charmbracelet/bubbletea"
+	"lesta-start-battleship/cli/internal/api/auth"
 	"lesta-start-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/clientdeps"
 	"strings"
 )
 
 type EditProfileModel struct {
-	username    string
-	tempNick    string
-	tempPass    string
-	activeTab   int // 0 - ник, 1 - пароль
-	activeField int
-	errorMsg    string
-	successMsg  string
+	username      string
+	tempNick      string
+	tempPass      string
+	activeTab     int // 0 - ник, 1 - пароль, 2 - удалить аккаунт
+	activeField   int // 0 - ввод, 1 - подтверждение
+	errorMsg      string
+	successMsg    string
+	gold          int
+	Clients       *clientdeps.Client
+	confirmDelete bool // true если показываем подтверждение удаления
 }
 
-func NewEditProfileModel(username string) *EditProfileModel {
+func NewEditProfileModel(username string, gold int, clients *clientdeps.Client) *EditProfileModel {
 	return &EditProfileModel{
 		username:    username,
+		gold:        gold,
 		tempNick:    username,
 		activeTab:   0,
 		activeField: 0,
+		Clients:     clients,
 	}
 }
 
@@ -30,41 +38,96 @@ func (m *EditProfileModel) Init() tea.Cmd {
 }
 
 func (m *EditProfileModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.confirmDelete {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEsc:
+				m.confirmDelete = false
+				m.activeField = 0
+				return m, nil
+			case tea.KeyEnter:
+				ctx := context.Background()
+				err := m.Clients.AuthClient.DeleteUser(ctx)
+				if err != nil {
+					m.errorMsg = "Ошибка удаления: " + err.Error()
+					m.confirmDelete = false
+					m.activeField = 0
+					return m, nil
+				}
+				return NewAuthModel(m.Clients), nil
+			}
+		}
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyTab:
-			if m.activeTab == 0 {
-				m.activeTab = 1
-			} else {
-				m.activeTab = 0
-			}
+			m.activeTab = (m.activeTab + 1) % 3
 			m.activeField = 0
 			return m, nil
 
+		/*case tea.KeyDown:
+			if m.activeTab != 2 && m.activeField < 1 {
+				m.activeField++
+			}
+			return m, nil
+
+		case tea.KeyUp:
+			if m.activeTab != 2 && m.activeField > 0 {
+				m.activeField--
+			}
+			return m, nil*/
+
 		case tea.KeyEnter:
+			if m.activeTab == 2 {
+				m.confirmDelete = true
+				return m, nil
+			}
 			if m.activeTab == 0 && m.activeField == 1 {
 				if len(m.tempNick) < 3 {
 					m.errorMsg = "Ник должен быть не менее 3 символов"
 				} else {
-					m.username = m.tempNick
+					ctx := context.Background()
+					profile, err := m.Clients.AuthClient.UpdateUser(ctx, auth.UpdateUserRequest{Username: m.tempNick})
+					if err != nil {
+						m.errorMsg = err.Error()
+						return m, nil
+					}
+					m.username = profile.Username
+					m.gold = profile.Currency.Gold
 					m.errorMsg = ""
 					m.tempNick = ""
 					m.successMsg = "Ник успешно изменен!"
 					return m, func() tea.Msg {
-						return UsernameChangeMsg{NewUsername: m.tempNick}
+						return UsernameChangeMsg{NewUsername: m.username, Gold: m.gold}
 					}
 				}
 			} else if m.activeTab == 1 && m.activeField == 1 {
 				if len(m.tempPass) < 6 {
 					m.errorMsg = "Пароль должен быть не менее 6 символов"
 				} else {
+					ctx := context.Background()
+					profile, err := m.Clients.AuthClient.UpdateUser(ctx, auth.UpdateUserRequest{Password: m.tempPass})
+					if err != nil {
+						m.errorMsg = err.Error()
+						return m, nil
+					}
+					m.username = profile.Username
+					m.gold = profile.Currency.Gold
 					m.errorMsg = ""
 					m.successMsg = "Пароль успешно изменен!"
 					m.tempPass = ""
+					return m, func() tea.Msg {
+						return UsernameChangeMsg{NewUsername: m.username, Gold: m.gold}
+					}
 				}
 			} else {
-				m.activeField = 1
+				if m.activeTab != 2 && m.activeField < 1 {
+					m.activeField = 1
+				}
 			}
 			return m, nil
 
@@ -85,7 +148,7 @@ func (m *EditProfileModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewMainMenuModel(m.username), nil
+			return NewMainMenuModel(m.username, m.gold, m.Clients), nil
 		}
 	}
 	return m, nil
@@ -97,8 +160,10 @@ func (m *EditProfileModel) View() string {
 	sb.WriteString(ui.TitleStyle.Render("Редактирование профиля"))
 	sb.WriteString("\n\n")
 
+	// Вкладки
 	nickTab := "Ник"
 	passTab := "Пароль"
+	deleteTab := "Удалить аккаунт"
 	if m.activeTab == 0 {
 		nickTab = ui.SelectedStyle.Render(nickTab)
 	} else {
@@ -109,8 +174,20 @@ func (m *EditProfileModel) View() string {
 	} else {
 		passTab = ui.NormalStyle.Render(passTab)
 	}
-	sb.WriteString(nickTab + " | " + passTab)
+	if m.activeTab == 2 {
+		deleteTab = ui.ErrorStyle.Render(deleteTab)
+	} else {
+		deleteTab = ui.NormalStyle.Render(deleteTab)
+	}
+	sb.WriteString(nickTab + " | " + passTab + " | " + deleteTab)
 	sb.WriteString("\n\n")
+
+	if m.confirmDelete {
+		sb.WriteString(ui.ErrorStyle.Render("Вы точно хотите удалить аккаунт?"))
+		sb.WriteString("\n")
+		sb.WriteString(ui.NormalStyle.Render("Esc - отмена, Enter - удалить"))
+		return sb.String()
+	}
 
 	if m.activeTab == 0 {
 		sb.WriteString("Текущий ник: " + m.username + "\n\n")
@@ -120,17 +197,24 @@ func (m *EditProfileModel) View() string {
 		} else {
 			sb.WriteString(" " + m.tempNick)
 			sb.WriteString("\n\n")
-			sb.WriteString(ui.SuccessStyle.Render("Нажмите Enter для сохранения"))
+			if m.activeField == 1 {
+				sb.WriteString(ui.SuccessStyle.Render("Нажмите Enter для сохранения"))
+			}
 		}
-	} else {
+	} else if m.activeTab == 1 {
 		sb.WriteString("Новый пароль:\n")
 		if m.activeField == 0 {
 			sb.WriteString(ui.SelectedStyle.Render("> " + strings.Repeat("*", len(m.tempPass)) + "_"))
 		} else {
 			sb.WriteString(" " + strings.Repeat("*", len(m.tempPass)))
 			sb.WriteString("\n\n")
-			sb.WriteString(ui.SuccessStyle.Render("Нажмите Enter для сохранения"))
+			if m.activeField == 1 {
+				sb.WriteString(ui.SuccessStyle.Render("Нажмите Enter для сохранения"))
+			}
 		}
+	} else if m.activeTab == 2 {
+		sb.WriteString("\n")
+		sb.WriteString(ui.ErrorStyle.Render("Нажмите Enter для удаления аккаунта"))
 	}
 
 	if m.errorMsg != "" {

@@ -1,10 +1,5 @@
 package models
 
-type LoginWithPasswordMsg struct {
-	Login    string
-	Password string
-}
-
 type LoginWithOAuthMsg struct {
 	Provider string
 }
@@ -12,10 +7,6 @@ type LoginWithOAuthMsg struct {
 type RegisterWithPasswordMsg struct {
 	Login    string
 	Password string
-}
-
-type RegisterWithOAuthMsg struct {
-	Provider string
 }
 
 type OAuthStartMsg struct {
@@ -37,6 +28,12 @@ type OAuthCancelMsg struct{}
 
 type OAuthTimeoutMsg struct{}
 
+type OAuthPollingResultMsg struct {
+	Username string
+	Gold     int
+	Error    string
+}
+
 type AuthSuccessMsg struct {
 	Username string
 	Gold     int
@@ -48,6 +45,7 @@ type OpenChatMsg struct{}
 
 type UsernameChangeMsg struct {
 	NewUsername string
+	Gold        int
 }
 
 type ChatKeyHandledMsg struct{}
