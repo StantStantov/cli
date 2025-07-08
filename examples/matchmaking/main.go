@@ -31,7 +31,7 @@ func main() {
 
 	id := rand.Text()
 	log.Printf("Created ID=%q", id)
-	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{"user_id": id})
+	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{"sub": id})
 	tokenString, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
 	if err != nil {
 		log.Println(err)
