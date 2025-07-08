@@ -2,7 +2,7 @@ package models
 
 import (
 	"github.com/charmbracelet/bubbletea"
-	"lesta-start-battleship/cli/internal/cli/ui"
+	"lesta-battleship/cli/internal/cli/ui"
 	"strings"
 )
 

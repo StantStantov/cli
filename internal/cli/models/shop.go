@@ -3,8 +3,8 @@ package models
 import (
 	"fmt"
 	"github.com/charmbracelet/bubbletea"
-	"lesta-start-battleship/cli/internal/cli/handlers"
-	"lesta-start-battleship/cli/internal/cli/ui"
+	"lesta-battleship/cli/internal/cli/handlers"
+	"lesta-battleship/cli/internal/cli/ui"
 	"strings"
 )
 
