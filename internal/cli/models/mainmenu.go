@@ -8,10 +8,12 @@ import (
 	"lesta-start-battleship/cli/internal/cli/handlers"
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"lesta-start-battleship/cli/internal/clientdeps"
+	guildStore "lesta-start-battleship/cli/store/guild"
 	"strings"
 )
 
 type MainMenuModel struct {
+	id       int
 	username string
 	gold     int
 	selected int
@@ -19,8 +21,9 @@ type MainMenuModel struct {
 	Clients  *clientdeps.Client
 }
 
-func NewMainMenuModel(username string, gold int, clients *clientdeps.Client) *MainMenuModel {
+func NewMainMenuModel(id int, username string, gold int, clients *clientdeps.Client) *MainMenuModel {
 	return &MainMenuModel{
+		id:       id,
 		username: username,
 		gold:     gold,
 		selected: 0,
@@ -54,9 +57,9 @@ func (m *MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case 2: // Магазин
 				return m, m.loadHandler
 			case 3: // Гильдия
-				return m, m.loadHandler
+				return m, m.guildHandler
 			case 4: // Редактирование профиля
-				return NewEditProfileModel(m.username, m.gold, m.Clients), nil
+				return NewEditProfileModel(m.id, m.username, m.gold, m.Clients), nil
 			case 5: // Рейтинг
 				return m, m.loadHandler
 			}
@@ -70,16 +73,19 @@ func (m *MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case *inventory.UserInventoryResponse:
-		return NewInventoryModel(m.username, m.gold, msg, m.Clients), nil
+		return NewInventoryModel(m.id, m.username, m.gold, msg, m.Clients), nil
 
 	case handlers.ShopResponse:
-		return NewShopModel(m.username, m.gold, msg, m.Clients), nil
+		return NewShopModel(m.id, m.username, m.gold, msg, m.Clients), nil
 
-	case handlers.GuildResponse:
-		return NewGuildModel(m.username, m.gold, msg, m.Clients), nil
+	case GuildDataMsg:
+		return NewGuildModel(m.id, m.username, m.gold, msg.Member, msg.Guild, m.Clients), nil
+
+	case GuildNoMemberMsg:
+		return NewGuildModel(m.id, m.username, m.gold, nil, nil, m.Clients), nil
 
 	case handlers.PlayerStats:
-		return NewScoreboardModel(m.username, m.gold, msg, m.Clients), nil
+		return NewScoreboardModel(m.id, m.username, m.gold, msg, m.Clients), nil
 	}
 
 	return m, nil
@@ -138,12 +144,6 @@ func (m *MainMenuModel) loadHandler() tea.Msg {
 			return err
 		}
 		return items
-	case 3:
-		guildInfo, err := handlers.GetGuildInfo(token)
-		if err != nil {
-			return err
-		}
-		return guildInfo
 	case 5:
 		stats, err := handlers.MyStatsHandler(token)
 		if err != nil {
@@ -152,6 +152,25 @@ func (m *MainMenuModel) loadHandler() tea.Msg {
 		return stats
 	}
 	return nil
+}
+
+// Новый обработчик для гильдий
+func (m *MainMenuModel) guildHandler() tea.Msg {
+	ctx := context.Background()
+	member, err := m.Clients.GuildsClient.GetMemberByUserID(ctx, m.id)
+	if err != nil || member == nil {
+		// Не состоит в гильдии
+		return GuildNoMemberMsg{}
+	}
+	guildStore.Self = *member
+	guild, err := m.Clients.GuildsClient.GetGuildByTag(ctx, member.GuildTag)
+	if err != nil || guild == nil {
+		return GuildNoMemberMsg{}
+	}
+	return GuildDataMsg{
+		Member: member,
+		Guild:  guild,
+	}
 }
 
 func (m *MainMenuModel) logoutHandler() tea.Msg {

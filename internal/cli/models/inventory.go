@@ -10,6 +10,7 @@ import (
 )
 
 type InventoryModel struct {
+	id          int
 	username    string
 	gold        int
 	items       *inventory.UserInventoryResponse
@@ -18,8 +19,9 @@ type InventoryModel struct {
 	Clients     *clientdeps.Client
 }
 
-func NewInventoryModel(username string, gold int, items *inventory.UserInventoryResponse, clients *clientdeps.Client) *InventoryModel {
+func NewInventoryModel(id int, username string, gold int, items *inventory.UserInventoryResponse, clients *clientdeps.Client) *InventoryModel {
 	return &InventoryModel{
+		id:          id,
 		username:    username,
 		gold:        gold,
 		items:       items,
@@ -58,7 +60,7 @@ func (m *InventoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewMainMenuModel(m.username, m.gold, m.Clients), nil
+			return NewMainMenuModel(m.id, m.username, m.gold, m.Clients), nil
 
 		case tea.KeyCtrlC:
 			return m, tea.Quit

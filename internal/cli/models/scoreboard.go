@@ -14,6 +14,7 @@ const (
 )
 
 type ScoreboardModel struct {
+	id           int
 	username     string
 	gold         int
 	activeTab    int // 0-моя, 1-игроки, 2-гильдия
@@ -27,8 +28,9 @@ type ScoreboardModel struct {
 	Clients      *clientdeps.Client
 }
 
-func NewScoreboardModel(username string, gold int, myStats handlers.PlayerStats, clients *clientdeps.Client) *ScoreboardModel {
+func NewScoreboardModel(id int, username string, gold int, myStats handlers.PlayerStats, clients *clientdeps.Client) *ScoreboardModel {
 	return &ScoreboardModel{
+		id:          id,
 		username:    username,
 		gold:        gold,
 		activeTab:   0,
@@ -92,7 +94,7 @@ func (m *ScoreboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewMainMenuModel(m.username, m.gold, m.Clients), nil
+			return NewMainMenuModel(m.id, m.username, m.gold, m.Clients), nil
 		}
 	}
 	return m, nil

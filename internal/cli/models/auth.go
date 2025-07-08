@@ -209,7 +209,6 @@ func (m *AuthModel) View() string {
 func (m *AuthModel) handleEnter() (tea.Model, tea.Cmd) {
 	// Логин/пароль
 	if m.authMethod == 0 {
-		// Определяем максимальное поле для текущей вкладки
 		maxField := 1
 		if m.activeTab == 1 {
 			maxField = 2
@@ -235,6 +234,7 @@ func (m *AuthModel) handleEnter() (tea.Model, tea.Cmd) {
 				return AuthSuccessMsg{
 					//Username: profile.Username,
 					//Gold:     profile.Currency.Gold,
+					ID:       777,
 					Username: m.login,
 					Gold:     1000,
 				}
@@ -256,6 +256,7 @@ func (m *AuthModel) handleEnter() (tea.Model, tea.Cmd) {
 			}
 			return m, func() tea.Msg {
 				return AuthSuccessMsg{
+					ID:       profile.ID,
 					Username: profile.Username,
 					Gold:     profile.Currency.Gold,
 				}

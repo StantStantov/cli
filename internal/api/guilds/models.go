@@ -14,6 +14,7 @@ const (
 	PathDeleteMember      = "/api/v1/guild/member/%s/%d"
 	PathEditMember        = "/api/v1/guild/member/%s/%d"
 	PathExitGuild         = "/api/v1/guild/member/%s/exit/%d"
+	PathGetGuilds         = "/api/v1/guild/"
 )
 
 // Role - роль участника гильдии
@@ -92,6 +93,7 @@ type ResponseMemberPagination struct {
 // RequestResponse - заявка на вступление
 type RequestResponse struct {
 	UserID    int    `json:"user_id"`
+	UserName  string `json:"user_name"`
 	CreatedAt string `json:"created_at"`
 }
 
@@ -117,6 +119,6 @@ type CreateGuildRequest struct {
 
 // EditMemberRequest - запрос на изменение участника
 type EditMemberRequest struct {
-	RoleID   int    `json:"role_id"`   // ID новой роли
+	RoleID   int    `json:"role_id"`   // id новой роли
 	UserName string `json:"user_name"` // Новое имя (опционально)
 }

@@ -10,6 +10,7 @@ import (
 )
 
 type ChatComponent struct {
+	ID           int
 	Username     string
 	guildID      int
 	messages     []handlers.ChatMessage
@@ -22,8 +23,9 @@ type ChatComponent struct {
 	wsClient     *handlers.WsClient
 }
 
-func NewChatComponent(username string, guildID int) *ChatComponent {
+func NewChatComponent(id int, username string, guildID int) *ChatComponent {
 	return &ChatComponent{
+		ID:       id,
 		Username: username,
 		guildID:  guildID,
 		Width:    55,

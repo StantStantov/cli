@@ -20,6 +20,7 @@ type OAuthModel struct {
 	oauthURI   string
 	deviceCode string // Для реального OAuth, здесь будет код устройства
 	status     string // "waiting", "success", "error"
+	id         int
 	username   string
 	gold       int
 	errorMsg   string
@@ -52,7 +53,7 @@ func (m *OAuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.errorMsg = ""
 				return m, m.pollingOAuth()
 			case "success":
-				return NewMainMenuModel(m.username, m.gold), nil
+				return NewMainMenuModel(m.id, m.username, m.gold), nil
 			case "pending":
 				return m, nil
 			}*/
@@ -64,7 +65,7 @@ func (m *OAuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				return m, func() tea.Msg { return OAuthPollingResultMsg{Error: "Пользователь не найден"} } // Здесь будет реальный результат
 			} else if m.status == "error" {
-				return NewMainMenuModel(m.username, m.gold, m.Clients), nil
+				return NewMainMenuModel(m.id, m.username, m.gold, m.Clients), nil
 			}
 			// После успеха/ошибки Enter возвращает в родительское меню
 			return m.parent, nil
@@ -80,6 +81,7 @@ func (m *OAuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.status = "success"
+		m.id = msg.ID
 		m.username = msg.Username
 		m.gold = msg.Gold
 		return m, nil
@@ -128,6 +130,6 @@ func (m *OAuthModel) pollingOAuth() tea.Cmd {
 		if err != nil {
 			return OAuthPollingResultMsg{Error: err.Error()}
 		}
-		return OAuthPollingResultMsg{Username: profile.Username, Gold: profile.Currency.Gold}
+		return OAuthPollingResultMsg{ID: profile.ID, Username: profile.Username, Gold: profile.Currency.Gold}
 	}
 }

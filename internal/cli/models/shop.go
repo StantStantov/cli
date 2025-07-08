@@ -10,6 +10,7 @@ import (
 )
 
 type ShopModel struct {
+	id       int
 	username string
 	gold     int
 	items    handlers.ShopResponse
@@ -19,8 +20,9 @@ type ShopModel struct {
 	Clients  *clientdeps.Client
 }
 
-func NewShopModel(username string, gold int, items handlers.ShopResponse, clients *clientdeps.Client) *ShopModel {
+func NewShopModel(id int, username string, gold int, items handlers.ShopResponse, clients *clientdeps.Client) *ShopModel {
 	return &ShopModel{
+		id:       id,
 		username: username,
 		gold:     gold,
 		items:    items,
@@ -72,7 +74,7 @@ func (m *ShopModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewMainMenuModel(m.username, m.gold, m.Clients), nil
+			return NewMainMenuModel(m.id, m.username, m.gold, m.Clients), nil
 		}
 	}
 	return m, nil

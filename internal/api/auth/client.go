@@ -193,7 +193,7 @@ func (c *Client) RefreshToken(ctx context.Context) (*TokenResponse, error) {
 func (c *Client) GetProfile(ctx context.Context) (*ProfileResponse, error) {
 	path := fmt.Sprintf(GetProfilePath, c.userID)
 	if c.userID == 0 {
-		return nil, fmt.Errorf("user ID not set")
+		return nil, fmt.Errorf("user id not set")
 	}
 
 	body, err := c.doRequest(ctx, "GET", path, nil)
@@ -365,7 +365,7 @@ func (c *Client) Logout(ctx context.Context) error {
 func (c *Client) UpdateUser(ctx context.Context, req UpdateUserRequest) (*ProfileResponse, error) {
 	path := fmt.Sprintf(UpdateUserPath, c.userID)
 	if c.userID == 0 {
-		return nil, fmt.Errorf("user ID not set")
+		return nil, fmt.Errorf("user id not set")
 	}
 
 	// проверка на наличие изменений
@@ -390,7 +390,7 @@ func (c *Client) UpdateUser(ctx context.Context, req UpdateUserRequest) (*Profil
 func (c *Client) DeleteUser(ctx context.Context) error {
 	path := fmt.Sprintf(DeleteUserPath, c.userID)
 	if c.userID == 0 {
-		return fmt.Errorf("user ID not set")
+		return fmt.Errorf("user id not set")
 	}
 
 	_, err := c.doRequest(ctx, "DELETE", path, nil)
@@ -404,7 +404,7 @@ func (c *Client) DeleteUser(ctx context.Context) error {
 
 // clearSession очищение состояния клиента (токены, куки, userID)
 func (c *Client) clearSession() {
-	// сброс токенов и ID
+	// сброс токенов и id
 	c.accessToken = ""
 	c.refreshToken = ""
 	c.userID = 0

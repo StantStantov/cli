@@ -10,6 +10,7 @@ import (
 )
 
 type EditProfileModel struct {
+	id            int
 	username      string
 	tempNick      string
 	tempPass      string
@@ -22,8 +23,9 @@ type EditProfileModel struct {
 	confirmDelete bool // true если показываем подтверждение удаления
 }
 
-func NewEditProfileModel(username string, gold int, clients *clientdeps.Client) *EditProfileModel {
+func NewEditProfileModel(id int, username string, gold int, clients *clientdeps.Client) *EditProfileModel {
 	return &EditProfileModel{
+		id:          id,
 		username:    username,
 		gold:        gold,
 		tempNick:    username,
@@ -148,7 +150,7 @@ func (m *EditProfileModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewMainMenuModel(m.username, m.gold, m.Clients), nil
+			return NewMainMenuModel(m.id, m.username, m.gold, m.Clients), nil
 		}
 	}
 	return m, nil
