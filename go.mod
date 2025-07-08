@@ -5,11 +5,14 @@ go 1.24.4
 require (
 	github.com/charmbracelet/bubbletea v1.3.5
 	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/gorilla/websocket v1.5.3
-	github.com/lesta-battleship/server-core v1.0.0
+	github.com/lesta-battleship/matchmaking v0.2.0
 )
 
 replace github.com/lesta-battleship/server-core => github.com/lesta-start-battleship/server-core v1.0.0
+
+replace github.com/lesta-battleship/matchmaking => github.com/lesta-start-battleship/matchmaking v0.2.0
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
