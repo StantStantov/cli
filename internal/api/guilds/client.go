@@ -124,6 +124,24 @@ func (c *Client) GetGuildByTag(ctx context.Context, tag string) (*GuildResponse,
 	return resp.Value, nil
 }
 
+// GetGuilds - получить список гильдий с пагинацией
+func (c *Client) GetGuilds(ctx context.Context, offset, limit int) (*GuildPagination, error) {
+	path := PathGetGuilds
+	params := map[string]string{
+		"offset": strconv.Itoa(offset),
+		"limit":  strconv.Itoa(limit),
+	}
+	body, err := c.doRequest(ctx, "GET", path, params, nil)
+	if err != nil {
+		return nil, err
+	}
+	var resp ResponseGuildPagination
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Value, nil
+}
+
 // SendJoinRequest - отправить запрос на вступление в гильдию
 func (c *Client) SendJoinRequest(ctx context.Context, guildTag string, userID int) error {
 	path := fmt.Sprintf(PathSendJoinRequest, guildTag)

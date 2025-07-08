@@ -94,7 +94,7 @@ func (c *Client) GetCurrentUserStats(ctx context.Context, userID int) (*UserStat
 	}
 
 	if len(resp.Items) == 0 {
-		return nil, fmt.Errorf("статистика пользователя с ID %d не найдена", userID)
+		return nil, fmt.Errorf("статистика пользователя с id %d не найдена", userID)
 	}
 
 	return &resp.Items[0], nil

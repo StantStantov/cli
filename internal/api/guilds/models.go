@@ -20,6 +20,7 @@ const (
 	PathConfirmWar        = "/api/v1/guild/war/confirm/%d"
 	PathCancelWar         = "/api/v1/guild/war/cancel/%d"
 	PathListGuildWars     = "/api/v1/guild/war/list"
+	PathGetGuilds         = "/api/v1/guild/"
 )
 
 // Role - роль участника гильдии
