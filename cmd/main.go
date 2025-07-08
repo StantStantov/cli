@@ -1,19 +1,14 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"lesta-start-battleship/cli/internal/app"
 	"log"
 	"os"
-	"time"
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	app, err := app.New(ctx)
+	app, err := app.New()
 	if err != nil {
 		log.Fatalf("Ошибка инициализации: %v", err)
 	}

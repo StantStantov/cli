@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	tea "github.com/charmbracelet/bubbletea"
 	"lesta-start-battleship/cli/internal/api/auth"
 	"lesta-start-battleship/cli/internal/api/guilds"
@@ -24,7 +23,7 @@ type App struct {
 	program *tea.Program
 }
 
-func New(ctx context.Context) (*App, error) {
+func New() (*App, error) {
 	initialClients, err := initClients()
 	if err != nil {
 		return nil, err
