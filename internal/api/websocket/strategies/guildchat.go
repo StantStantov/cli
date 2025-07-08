@@ -1,6 +1,7 @@
 package strategies
 
 import (
+	"fmt"
 	"lesta-battleship/cli/internal/api/websocket/packets"
 	"lesta-battleship/cli/internal/api/websocket/packets/guild"
 
@@ -24,7 +25,7 @@ func (c GuildChatStrategy) ReadPump(readChan chan<- packets.Packet, conn *websoc
 		}
 
 		if err := conn.ReadJSON(&packet); err != nil {
-			return err
+			return fmt.Errorf("GuildChatStrategy.ReadPump: [%w]", err)
 		}
 
 		readChan <- packets.WrapGuild(packet)
@@ -34,16 +35,17 @@ func (c GuildChatStrategy) ReadPump(readChan chan<- packets.Packet, conn *websoc
 func (c GuildChatStrategy) WritePump(writeChan <-chan packets.Packet, conn *websocket.Conn) error {
 	for packet := range writeChan {
 		var unwrap guild.Packet
-		packets.UnwrapAsGuild(packet, &unwrap)
+		if err := packets.UnwrapAsGuild(packet, &unwrap); err != nil {
+			return fmt.Errorf("GuildChatStrategy.WritePump: [%w]", err)
+		}
+
+		if err := conn.WriteJSON(packet.Content()); err != nil {
+			return fmt.Errorf("GuildChatStrategy.WritePump: [%w]", err)
+		}
 
 		switch unwrap.(type) {
 		case *guild.Disconnect:
 			return nil
-		default:
-			err := conn.WriteJSON(packet.Content())
-			if err != nil {
-				return err
-			}
 		}
 	}
 
