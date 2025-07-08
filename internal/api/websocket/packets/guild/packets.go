@@ -23,6 +23,7 @@ type ChatHistoryMessage struct {
 	UserId    int    `json:"user_id"`
 	Content   string `json:"content"`
 	Timestamp string `json:"timestamp"`
+	Username  string `json:"username"`
 }
 
 func (ChatHistoryMessage) isGuildPacket() {}

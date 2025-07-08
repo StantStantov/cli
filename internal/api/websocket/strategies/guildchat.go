@@ -18,7 +18,7 @@ type GuildChatStrategy struct{}
 func (c GuildChatStrategy) ReadPump(readChan chan<- packets.Packet, conn *websocket.Conn) error {
 	isFirstMessage := true
 	for {
-		var packet guild.Packet = new(guild.ChatMessage)
+		var packet guild.Packet = new(guild.ChatHistoryMessage)
 		if isFirstMessage {
 			packet = new(guild.ChatHistory)
 			isFirstMessage = false
