@@ -19,6 +19,7 @@ const (
 	PathDeclareWar        = "/api/v1/guild/war/declare"
 	PathConfirmWar        = "/api/v1/guild/war/confirm/%d"
 	PathCancelWar         = "/api/v1/guild/war/cancel/%d"
+	PathListGuildWars     = "/api/v1/guild/war/list"
 )
 
 // Role - роль участника гильдии
@@ -185,4 +186,22 @@ type CancelWarResponse struct {
 	TargetGuildID    int       `json:"target_guild_id"`
 	InitiatorOwnerID int       `json:"initiator_owner_id"`
 	TargetOwnerID    int       `json:"target_owner_id"`
+}
+
+// GuildWarItem - элементы списка войн гильдий
+type GuildWarItem struct {
+	ID               int       `json:"id"`
+	InitiatorGuildID int       `json:"initiator_guild_id"`
+	TargetGuildID    int       `json:"target_guild_id"`
+	Status           WarStatus `json:"status"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+// GuildWarListResponse - ответ со списком войн гильдий
+type GuildWarListResponse struct {
+	Page       int            `json:"page"`
+	PageSize   int            `json:"page_size"`
+	Total      int            `json:"total"`
+	TotalPages int            `json:"total_pages"`
+	Results    []GuildWarItem `json:"results"`
 }

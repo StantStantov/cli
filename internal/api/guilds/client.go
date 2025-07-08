@@ -296,3 +296,47 @@ func (c *Client) CancelWar(
 
 	return &resp, nil
 }
+
+// GetGuildWarList - получить список войн гильдии с фильтрами
+func (c *Client) GetGuildWarList(
+	ctx context.Context,
+	userID int,
+	guildID int,
+	isInitiator *bool,
+	isTarget *bool,
+	status *WarStatus,
+	page int,
+	pageSize int,
+) (*GuildWarListResponse, error) {
+
+	// параметры запроса
+	params := map[string]string{
+		"user_id":   strconv.Itoa(userID),
+		"guild_id":  strconv.Itoa(guildID),
+		"page":      strconv.Itoa(page),
+		"page_size": strconv.Itoa(pageSize),
+	}
+
+	// опциональные параметры
+	if isInitiator != nil {
+		params["is_initiator"] = strconv.FormatBool(*isInitiator)
+	}
+	if isTarget != nil {
+		params["is_target"] = strconv.FormatBool(*isTarget)
+	}
+	if status != nil {
+		params["status"] = string(*status)
+	}
+
+	body, err := c.doRequest(ctx, "GET", PathListGuildWars, params, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response GuildWarListResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
