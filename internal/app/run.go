@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	tea "github.com/charmbracelet/bubbletea"
-	cliModel "lesta-start-battleship/cli/internal/cli/initCli"
+	cliModel "lesta-battleship/cli/internal/cli/initCli"
 )
 
 type App struct {

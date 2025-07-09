@@ -3,7 +3,7 @@ package initCli
 import (
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"lesta-start-battleship/cli/internal/cli/models"
+	"lesta-battleship/cli/internal/cli/models"
 )
 
 type CLI struct {
