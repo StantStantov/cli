@@ -1,38 +1,29 @@
 package models
 
 import (
-	"fmt"
 	"lesta-battleship/cli/internal/cli/ui"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const matchmakingUrl = "ws://37.9.53.32.80/matchmaking/%s"
-
-func formatMatchmakingUrl(matchType string) string {
-	return fmt.Sprintf(matchmakingUrl, matchType)
-}
-
-type MatchmakingModel struct {
+type MatchmakingCustomMenuModel struct {
 	username string
 
 	selected int
 }
 
-func NewMatchmakingModel(username string) *MatchmakingModel {
-	return &MatchmakingModel{
+func NewMatchmakingCustomMenuModel(username string) *MatchmakingCustomMenuModel {
+	return &MatchmakingCustomMenuModel{
 		username: username,
 	}
 }
 
-func (m *MatchmakingModel) Init() tea.Cmd {
+func (m *MatchmakingCustomMenuModel) Init() tea.Cmd {
 	return nil
 }
 
-const matchTypesAmount = 4
-
-func (m *MatchmakingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *MatchmakingCustomMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -47,21 +38,16 @@ func (m *MatchmakingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			switch m.selected {
 			case 0:
-				model := NewMatchmakingWaitScreenModel(m.username)
+				model := NewMatchmakingCustomRoomModel(m.username)
 				return model, model.Init()
 			case 1:
-				model := NewMatchmakingWaitScreenModel(m.username)
-				return model, model.Init()
-			case 2:
-				return m, nil
-			case 3:
-				model := NewMatchmakingCustomMenuModel(m.username)
+				model := NewMatchmakingCustomJoinModel(m.username)
 				return model, model.Init()
 			}
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewMainMenuModel(m.username), nil
+			return NewMatchmakingModel(m.username), nil
 
 		case tea.KeyCtrlC:
 			return m, tea.Quit
@@ -71,7 +57,7 @@ func (m *MatchmakingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *MatchmakingModel) View() string {
+func (m *MatchmakingCustomMenuModel) View() string {
 	var sb strings.Builder
 
 	sb.WriteString(ui.TitleStyle.Render("Морской Бой"))
@@ -80,10 +66,8 @@ func (m *MatchmakingModel) View() string {
 	sb.WriteString("\n\n")
 
 	menuItems := []string{
-		"Случайный",
-		"Рейтинговый",
-		"Гильдейский",
-		"Кастомный",
+		"Создать",
+		"Присоединиться",
 	}
 
 	for i, item := range menuItems {

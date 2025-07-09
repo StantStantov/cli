@@ -16,7 +16,6 @@ type MatchmakingWaitScreenModel struct {
 
 	startTime time.Time
 	endTime   time.Time
-	// timer *time.Ticker
 }
 
 func NewMatchmakingWaitScreenModel(username string) *MatchmakingWaitScreenModel {
@@ -27,7 +26,6 @@ func NewMatchmakingWaitScreenModel(username string) *MatchmakingWaitScreenModel 
 
 		startTime: now,
 		endTime: now,
-		// timer: time.NewTicker(time.Second),
 	}
 }
 
@@ -40,7 +38,7 @@ func (m *MatchmakingWaitScreenModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEsc:
-			return NewMainMenuModel(m.username), nil
+			return NewMatchmakingModel(m.username), nil
 
 		case tea.KeyCtrlC:
 			return m, tea.Quit
