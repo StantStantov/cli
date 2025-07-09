@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"lesta-start-battleship/cli/internal/api/token"
 	"net/http"
 	"net/url"
 	"time"
@@ -13,9 +14,10 @@ import (
 
 // Client - клиент для взаимодействия с API инвентаря
 type Client struct {
-	baseURL     *url.URL
-	httpClient  *http.Client
-	accessToken string
+	baseURL      *url.URL
+	httpClient   *http.Client
+	accessToken  string
+	refreshToken string
 }
 
 // NewClient создает новый клиент для работы с API инвентаря
@@ -34,8 +36,10 @@ func NewClient(baseURL string) (*Client, error) {
 }
 
 // SetAccessToken устанавливает Access token для аутентификации
-func (c *Client) SetAccessToken(token string) {
-	c.accessToken = token
+func (c *Client) SetAccessToken(accessToken, refreshToken string) {
+	token.AccessToken = accessToken
+	token.RefreshToken = refreshToken
+
 }
 
 // doRequest выполняет HTTP запрос
@@ -56,7 +60,8 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 
 	req.Header.Set("Content-Type", "application/json")
 	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+		req.Header.Set("Authorization", c.accessToken)
+		req.Header.Set("Refresh-Token", c.refreshToken)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -64,6 +69,8 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
 	}
 	defer resp.Body.Close()
+	token.AccessToken = resp.Header.Get("Authorization")
+	token.RefreshToken = resp.Header.Get("Refresh-Token")
 
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)

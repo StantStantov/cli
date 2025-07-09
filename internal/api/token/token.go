@@ -1,4 +1,6 @@
 package token
 
-var AccessToken string
-var RefreshToken string
+var (
+	AccessToken  string
+	RefreshToken string
+)

@@ -16,9 +16,10 @@ import (
 
 // Client - клиент для работы с API гильдий
 type Client struct {
-	baseURL     *url.URL
-	httpClient  *http.Client
-	accessToken string
+	baseURL      *url.URL
+	httpClient   *http.Client
+	accessToken  string
+	refreshToken string
 }
 
 // NewClient создает новый клиент
@@ -37,8 +38,9 @@ func NewClient(baseURL string) (*Client, error) {
 }
 
 // SetAccessToken устанавливает токен доступа
-func (c *Client) SetAccessToken(token string) {
-	c.accessToken = token
+func (c *Client) SetAccessToken(accessToken, refreshToken string) {
+	token.AccessToken = accessToken
+	token.RefreshToken = refreshToken
 }
 
 // doRequest HTTP запрос с заданным методом, путем и телом и с учётом query-параметров
@@ -73,7 +75,7 @@ func (c *Client) doRequest(
 
 	req.Header.Set("Content-Type", "application/json")
 	if token.AccessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+		req.Header.Set("Authorization", token.AccessToken)
 		req.Header.Set("Refresh-Token", token.RefreshToken)
 	}
 
@@ -82,6 +84,8 @@ func (c *Client) doRequest(
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
+	token.AccessToken = resp.Header.Get("Authorization")
+	token.RefreshToken = resp.Header.Get("Refresh-Token")
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {

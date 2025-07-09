@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"lesta-start-battleship/cli/internal/api/token"
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 const (
@@ -16,26 +18,31 @@ const (
 
 // Client - клиент для работы с Scoreboard
 type Client struct {
-	baseURL     string
-	httpClient  *http.Client
-	accessToken string
+	baseURL      *url.URL
+	httpClient   *http.Client
+	accessToken  string
+	refreshToken string
 }
 
 // NewClient - создание нового клиента
-func NewClient(baseURL string, httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
+func NewClient(baseURL string) (*Client, error) {
+	parsedURL, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("некорректный базовый URL: %w", err)
 	}
 
 	return &Client{
-		baseURL:    baseURL,
-		httpClient: httpClient,
-	}
+		baseURL: parsedURL,
+		httpClient: &http.Client{
+			Timeout: 15 * time.Second,
+		},
+	}, nil
 }
 
 // SetAccessToken - установка токенов доступа для авторизации
-func (c *Client) SetAccessToken(token string) {
-	c.accessToken = token
+func (c *Client) SetAccessToken(accessToken, refreshToken string) {
+	c.accessToken = token.AccessToken
+	c.refreshToken = token.RefreshToken
 }
 
 // GetUserStats - получение статистики пользователей
@@ -177,7 +184,8 @@ func (c *Client) doRequest(ctx context.Context, url string) ([]byte, error) {
 	// установка токена в хедер
 	req.Header.Set("Accept", "application/json")
 	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+		req.Header.Set("Authorization", c.accessToken)
+		req.Header.Set("Refresh-Token", c.refreshToken)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -185,6 +193,8 @@ func (c *Client) doRequest(ctx context.Context, url string) ([]byte, error) {
 		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
 	}
 	defer resp.Body.Close()
+	token.AccessToken = resp.Header.Get("Authorization")
+	token.RefreshToken = resp.Header.Get("Refresh-Token")
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

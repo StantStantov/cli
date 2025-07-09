@@ -39,8 +39,11 @@ func NewClient(baseURL string) (*Client, error) {
 
 // SetTokens - установка access и refresh токенов в клиенте
 func (c *Client) SetTokens(accessToken, refreshToken string) {
-	token.AccessToken = accessToken
-	token.RefreshToken = refreshToken
+	c.accessToken, c.refreshToken = token.AccessToken, token.RefreshToken
+}
+
+func (c *Client) GetTokens() (string, string) {
+	return c.accessToken, c.refreshToken
 }
 
 // doRequest HTTP запрос с заданным методом, путем и телом
@@ -74,6 +77,8 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 		return nil, fmt.Errorf("сетевая ошибка: %w", err)
 	}
 	defer resp.Body.Close()
+	token.AccessToken = resp.Header.Get("Authorization")
+	token.RefreshToken = resp.Header.Get("Refresh-Token")
 
 	// чтение тела ответа
 	responseBody, err := io.ReadAll(resp.Body)
@@ -164,32 +169,32 @@ func (c *Client) Login(ctx context.Context, req LoginRequest) (*TokenResponse, *
 	return &resp, profile, nil
 }
 
-// RefreshToken - обновление access token с помощью refresh token
-func (c *Client) RefreshToken(ctx context.Context) (*TokenResponse, error) {
-	if c.refreshToken == "" {
-		return nil, fmt.Errorf("отсутствует refresh token")
-	}
-
-	// использование refresh token как временный access token
-	tempToken := c.accessToken
-	c.accessToken = c.refreshToken
-
-	body, err := c.doRequest(ctx, "POST", RefreshTokenPath, nil)
-
-	// восстановление оригинальный access token
-	c.accessToken = tempToken
-
-	if err != nil {
-		return nil, fmt.Errorf("ошибка обновления токена: %w", err)
-	}
-
-	var resp TokenResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
-	}
-	c.SetTokens(resp.AccessToken, c.refreshToken)
-	return &resp, nil
-}
+//// RefreshToken - обновление access token с помощью refresh token
+//func (c *Client) RefreshToken(ctx context.Context) (*TokenResponse, error) {
+//	if c.refreshToken == "" {
+//		return nil, fmt.Errorf("отсутствует refresh token")
+//	}
+//
+//	// использование refresh token как временный access token
+//	tempToken := c.accessToken
+//	c.accessToken = c.refreshToken
+//
+//	body, err := c.doRequest(ctx, "POST", RefreshTokenPath, nil)
+//
+//	// восстановление оригинальный access token
+//	c.accessToken = tempToken
+//
+//	if err != nil {
+//		return nil, fmt.Errorf("ошибка обновления токена: %w", err)
+//	}
+//
+//	var resp TokenResponse
+//	if err := json.Unmarshal(body, &resp); err != nil {
+//		return nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
+//	}
+//	c.SetTokens(resp.AccessToken, c.refreshToken)
+//	return &resp, nil
+//}
 
 // GetProfile - получение профиля текущего пользователя
 func (c *Client) GetProfile(ctx context.Context) (*ProfileResponse, error) {
@@ -278,7 +283,6 @@ func (c *Client) CheckOAuthDeviceFlow(ctx context.Context, provider, deviceCode 
 			resp.Status = "pending"
 		}
 	}
-
 	return &resp, nil
 }
 
