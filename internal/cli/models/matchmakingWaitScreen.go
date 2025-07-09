@@ -1,36 +1,70 @@
 package models
 
 import (
+	"crypto/rand"
 	"fmt"
+	"lesta-battleship/cli/internal/api/websocket"
+	"lesta-battleship/cli/internal/api/websocket/packets"
+	"lesta-battleship/cli/internal/api/websocket/strategies"
 	"lesta-battleship/cli/internal/cli/ui"
+	"log"
+	"net/http"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/golang-jwt/jwt/v5"
+	matchmaking "github.com/lesta-battleship/matchmaking/pkg/packets"
 )
 
 type tickMsg time.Time
 
 type MatchmakingWaitScreenModel struct {
+	userId   string
 	username string
 
+	ticker    *time.Ticker
 	startTime time.Time
 	endTime   time.Time
+
+	wsClient *websocket.WebsocketClient
 }
 
-func NewMatchmakingWaitScreenModel(username string) *MatchmakingWaitScreenModel {
+func NewMatchmakingWaitScreenModel(username, matchType string) *MatchmakingWaitScreenModel {
+	id := rand.Text()
+	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{"sub": id})
+	tokenString, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+	if err != nil {
+		log.Fatal(err)
+	}
+	header := http.Header{}
+	header.Add("Authorization", fmt.Sprintf("Bearer %s", tokenString))
+
+	url := formatMatchmakingUrl(matchType)
+	client, err := websocket.NewWebsocketClient(url, header, strategies.MatchmakingStrategy{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	go client.WritePump()
+	go client.ReadPump()
+
 	now := time.Now()
+	ticker := time.NewTicker(time.Second)
 
 	return &MatchmakingWaitScreenModel{
+		userId:   id,
 		username: username,
 
+		ticker:    ticker,
 		startTime: now,
-		endTime: now,
+		endTime:   now,
+
+		wsClient: client,
 	}
 }
 
 func (m *MatchmakingWaitScreenModel) Init() tea.Cmd {
-	return tickEvery()
+	return m.waitForMessage()
 }
 
 func (m *MatchmakingWaitScreenModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -43,9 +77,13 @@ func (m *MatchmakingWaitScreenModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC:
 			return m, tea.Quit
 		}
+	case *matchmaking.PlayerMessage:
+		model := NewMatchmakingCustomRoomModel(m.username, m.userId, m.wsClient)
+		model.roomId = msg.Msg
+		return model, model.Init()
 	case tickMsg:
 		m.endTime = time.Time(msg)
-		return m, tickEvery()
+		return m, m.waitForMessage()
 	}
 
 	return m, nil
@@ -67,8 +105,17 @@ func (m *MatchmakingWaitScreenModel) View() string {
 	return sb.String()
 }
 
-func tickEvery() tea.Cmd {
-	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
-		return tickMsg(t)
-	})
+func (c *MatchmakingWaitScreenModel) waitForMessage() tea.Cmd {
+	return func() tea.Msg {
+		select {
+		case packet := <-c.wsClient.ReadChan():
+			var unwrapped matchmaking.Packet
+			if err := packets.UnwrapAsMatchmaking(packet, &unwrapped); err != nil {
+				log.Fatal(err)
+			}
+			return unwrapped.Body
+		case tick := <-c.ticker.C:
+			return tickMsg(tick)
+		}
+	}
 }
