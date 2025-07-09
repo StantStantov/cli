@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-const matchmakingUrl = "ws://37.9.53.32.80/matchmaking/%s"
+const matchmakingUrl = "ws://37.9.53.32:80/matchmaking/%s"
 
 func formatMatchmakingUrl(matchType string) string {
 	return fmt.Sprintf(matchmakingUrl, matchType)

@@ -62,7 +62,7 @@ func (m *MatchmakingWaitScreenModel) View() string {
 	fmt.Fprintf(&sb, "Время прошло: %s", m.endTime.Sub(m.startTime).Round(time.Second))
 
 	sb.WriteString("\n\n")
-	sb.WriteString(ui.NormalStyle.Render("↑/↓ - выбор, Enter - подтвердить, Esc - выход"))
+	sb.WriteString(ui.NormalStyle.Render("Esc - выход"))
 
 	return sb.String()
 }
