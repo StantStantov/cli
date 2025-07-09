@@ -27,6 +27,7 @@ type ShopResponse struct {
 }
 
 type ShopModel struct {
+	parent   tea.Model
 	id       int
 	username string
 	gold     int
@@ -37,8 +38,9 @@ type ShopModel struct {
 	Clients  *clientdeps.Client
 }
 
-func NewShopModel(id int, username string, gold int, items ShopResponse, clients *clientdeps.Client) *ShopModel {
+func NewShopModel(parent tea.Model, id int, username string, gold int, items ShopResponse, clients *clientdeps.Client) *ShopModel {
 	return &ShopModel{
+		parent:   parent,
 		id:       id,
 		username: username,
 		gold:     gold,
@@ -185,8 +187,8 @@ func (m *ShopModel) View() string {
 }
 
 func (m *ShopModel) loadItems() tea.Msg {
-	token := "dummy_token_" + m.username
-	var items handlers.ShopResponse
+	ctx := context.Background()
+	var items []ShopItem
 	var err error
 
 	switch m.category {

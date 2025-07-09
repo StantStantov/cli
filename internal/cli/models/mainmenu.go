@@ -5,7 +5,6 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"lesta-start-battleship/cli/internal/api/inventory"
-	"lesta-start-battleship/cli/internal/cli/handlers"
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"lesta-start-battleship/cli/internal/clientdeps"
 	guildStorage "lesta-start-battleship/cli/storage/guild"
@@ -55,7 +54,7 @@ func (m *MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case 1: // Инвентарь
 				return m, m.loadHandler
 			case 2: // Магазин
-				return m, m.loadHandler
+				return NewShopModel(m, m.id, m.username, m.gold, ShopResponse{}, m.Clients), nil
 			case 3: // Гильдия
 				return m, m.guildHandler
 			case 4: // Редактирование профиля
@@ -75,17 +74,11 @@ func (m *MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case *inventory.UserInventoryResponse:
 		return NewInventoryModel(m.id, m.username, m.gold, msg, m.Clients), nil
 
-	case handlers.ShopResponse:
-		return NewShopModel(m.id, m.username, m.gold, msg, m.Clients), nil
-
 	case GuildDataMsg:
 		return NewGuildModel(m.id, m.username, m.gold, msg.Member, msg.Guild, m.Clients), nil
 
 	case GuildNoMemberMsg:
 		return NewGuildModel(m.id, m.username, m.gold, nil, nil, m.Clients), nil
-
-	case handlers.PlayerStats:
-		return NewScoreboardModel(m, m.id, m.username, m.gold, m.Clients), nil
 	}
 
 	return m, nil
@@ -128,7 +121,6 @@ func (m *MainMenuModel) View() string {
 }
 
 func (m *MainMenuModel) loadHandler() tea.Msg {
-	token := "dummy_token_" + m.username
 	switch m.selected {
 	case 1:
 		ctx := context.Background()
@@ -136,12 +128,6 @@ func (m *MainMenuModel) loadHandler() tea.Msg {
 		if err != nil {
 			m.errorMsg = fmt.Sprintf("%v", err)
 			return m
-		}
-		return items
-	case 2:
-		items, err := handlers.ItemsHandler(token)
-		if err != nil {
-			return err
 		}
 		return items
 	}
