@@ -5,23 +5,31 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"lesta-start-battleship/cli/storage/token"
 	"net/http"
+	"net/url"
 	"time"
 )
 
 // Client - клиент для работы с Shop
 type Client struct {
-	baseURL     string
-	httpClient  *http.Client
-	accessToken string
+	baseURL    *url.URL
+	httpClient *http.Client
+	tokenStore *token.Storage
 }
 
 // NewClient - создание нового клиента
-func NewClient(baseURL string) *Client {
-	return &Client{
-		baseURL:    baseURL,
-		httpClient: &http.Client{Timeout: 15 * time.Second},
+func NewClient(baseURL string, tokens *token.Storage) (*Client, error) {
+	parsedURL, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base URL: %w", err)
 	}
+
+	return &Client{
+		baseURL:    parsedURL,
+		httpClient: &http.Client{Timeout: 15 * time.Second},
+		tokenStore: tokens,
+	}, nil
 }
 
 // SetAccessToken - установка токенов доступа для авторизации

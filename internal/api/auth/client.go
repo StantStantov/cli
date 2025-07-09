@@ -6,24 +6,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"lesta-start-battleship/cli/internal/api/token"
 	"net/http"
 	"net/url"
 	"time"
+
+	"lesta-start-battleship/cli/storage/token"
 )
 
 // Client - клиент для взаимодействия с API
 type Client struct {
-	baseURL      *url.URL
-	httpClient   *http.Client
-	accessToken  string
-	refreshToken string
-	userID       int
+	baseURL    *url.URL
+	httpClient *http.Client
+	tokenStore *token.Storage
+	userID int
 }
 
 // NewClient - создание клиента для работы с API
-func NewClient(baseURL string) (*Client, error) {
-
+func NewClient(baseURL string, tokens *token.Storage) (*Client, error) {
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("некорректный базовый URL: %w", err)
@@ -34,13 +33,8 @@ func NewClient(baseURL string) (*Client, error) {
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
+		tokenStore: tokens,
 	}, nil
-}
-
-// SetTokens - установка access и refresh токенов в клиенте
-func (c *Client) SetTokens(accessToken, refreshToken string) {
-	token.AccessToken = accessToken
-	token.RefreshToken = refreshToken
 }
 
 // doRequest HTTP запрос с заданным методом, путем и телом
@@ -61,10 +55,11 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 	}
 
 	// установка заголовков
+	access, refresh := c.tokenStore.GetToken()
 	req.Header.Set("Content-Type", "application/json")
-	if token.AccessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+token.AccessToken)
-		req.Header.Set("Refresh-Token", token.RefreshToken)
+	if access != "" {
+		req.Header.Set("Authorization", access)
+		req.Header.Set("Refresh-Token", refresh)
 	}
 
 	// выполнение запроса
@@ -74,6 +69,10 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 		return nil, fmt.Errorf("сетевая ошибка: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+
+	}
 
 	// чтение тела ответа
 	responseBody, err := io.ReadAll(resp.Body)
@@ -131,7 +130,7 @@ func (c *Client) Register(ctx context.Context, req UserRegRequest) (*TokenRespon
 	}
 
 	// установка токенов в клиент
-	c.SetTokens(resp.AccessToken, resp.RefreshToken)
+	c.(resp.AccessToken, resp.RefreshToken)
 
 	profile, err := c.GetProfile(ctx)
 	if err == nil {
@@ -166,18 +165,15 @@ func (c *Client) Login(ctx context.Context, req LoginRequest) (*TokenResponse, *
 
 // RefreshToken - обновление access token с помощью refresh token
 func (c *Client) RefreshToken(ctx context.Context) (*TokenResponse, error) {
-	if c.refreshToken == "" {
+	_, refresh := c.tokenStore.GetToken()
+	if refresh == "" {
 		return nil, fmt.Errorf("отсутствует refresh token")
 	}
 
 	// использование refresh token как временный access token
-	tempToken := c.accessToken
-	c.accessToken = c.refreshToken
+	c.tokenStore.SetTokens(refresh, refresh)
 
 	body, err := c.doRequest(ctx, "POST", RefreshTokenPath, nil)
-
-	// восстановление оригинальный access token
-	c.accessToken = tempToken
 
 	if err != nil {
 		return nil, fmt.Errorf("ошибка обновления токена: %w", err)
@@ -187,14 +183,14 @@ func (c *Client) RefreshToken(ctx context.Context) (*TokenResponse, error) {
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, fmt.Errorf("ошибка декодирования ответа: %w", err)
 	}
-	c.SetTokens(resp.AccessToken, c.refreshToken)
+	c.tokenStore.SetTokens(resp.AccessToken, refresh)
 	return &resp, nil
 }
 
 // GetProfile - получение профиля текущего пользователя
-func (c *Client) GetProfile(ctx context.Context) (*ProfileResponse, error) {
-	path := fmt.Sprintf(GetProfilePath, c.userID)
-	if c.userID == 0 {
+func (c *Client) GetProfile(ctx context.Context, userID int) (*ProfileResponse, error) {
+	path := fmt.Sprintf(GetProfilePath, userID)
+	if userID == 0 {
 		return nil, fmt.Errorf("user id not set")
 	}
 
@@ -207,7 +203,6 @@ func (c *Client) GetProfile(ctx context.Context) (*ProfileResponse, error) {
 	if err := json.Unmarshal(body, &profile); err != nil {
 		return nil, fmt.Errorf("ошибка декодирования профиля: %w", err)
 	}
-	c.userID = profile.ID
 	return &profile, nil
 }
 
@@ -327,14 +322,12 @@ func (c *Client) CompleteOAuthPolling(
 				if checkResp.User != nil {
 					// берем профиль из ответа, если он есть
 					profile = checkResp.User
-					c.userID = profile.ID
 				} else {
 					// если профиль не пришел, запрашиваем отдельно
 					profile, err = c.GetProfile(ctx)
 					if err != nil {
 						return tokens, nil, fmt.Errorf("ошибка получения профиля: %w", err)
 					}
-					c.userID = profile.ID
 				}
 
 				return tokens, profile, nil
@@ -364,14 +357,14 @@ func (c *Client) Logout(ctx context.Context) error {
 		return fmt.Errorf("ошибка выхода: %w", err)
 	}
 
-	c.clearSession()
+	c.tokenStore.Clear()
 	return nil
 }
 
 // UpdateUser - обновление данных пользователя (имя и/или пароль)
-func (c *Client) UpdateUser(ctx context.Context, req UpdateUserRequest) (*ProfileResponse, error) {
-	path := fmt.Sprintf(UpdateUserPath, c.userID)
-	if c.userID == 0 {
+func (c *Client) UpdateUser(ctx context.Context, userID int, req UpdateUserRequest) (*ProfileResponse, error) {
+	path := fmt.Sprintf(UpdateUserPath, userID)
+	if userID == 0 {
 		return nil, fmt.Errorf("user id not set")
 	}
 
@@ -389,14 +382,13 @@ func (c *Client) UpdateUser(ctx context.Context, req UpdateUserRequest) (*Profil
 	if err := json.Unmarshal(body, &profile); err != nil {
 		return nil, fmt.Errorf("ошибка декодирования профиля: %w", err)
 	}
-	c.userID = profile.ID
 	return &profile, nil
 }
 
 // DeleteUser - удаление текущего пользователя
-func (c *Client) DeleteUser(ctx context.Context) error {
-	path := fmt.Sprintf(DeleteUserPath, c.userID)
-	if c.userID == 0 {
+func (c *Client) DeleteUser(ctx context.Context, userID int) error {
+	path := fmt.Sprintf(DeleteUserPath, userID)
+	if userID == 0 {
 		return fmt.Errorf("user id not set")
 	}
 
@@ -405,14 +397,6 @@ func (c *Client) DeleteUser(ctx context.Context) error {
 		return fmt.Errorf("ошибка удаления пользователя: %w", err)
 	}
 
-	c.clearSession()
+	c.tokenStore.Clear()
 	return nil
-}
-
-// clearSession очищение состояния клиента (токены, куки, userID)
-func (c *Client) clearSession() {
-	// сброс токенов и id
-	c.accessToken = ""
-	c.refreshToken = ""
-	c.userID = 0
 }

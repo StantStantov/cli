@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"lesta-start-battleship/cli/storage/token"
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 const (
@@ -16,26 +18,30 @@ const (
 
 // Client - клиент для работы с Scoreboard
 type Client struct {
-	baseURL     string
+	baseURL     *url.URL
 	httpClient  *http.Client
-	accessToken string
+	tokenStore *token.Storage
 }
 
 // NewClient - создание нового клиента
-func NewClient(baseURL string, httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
+func NewClient(baseURL string, tokens *token.Storage) (*Client, error) {
+	parsedURL, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base URL: %w", err)
 	}
 
 	return &Client{
-		baseURL:    baseURL,
-		httpClient: httpClient,
-	}
+		baseURL:    parsedURL,
+		httpClient: &http.Client{
+			Timeout: 15 * time.Second,
+		},
+		tokenStore: tokens,
+	}, nil
 }
 
 // SetAccessToken - установка токенов доступа для авторизации
 func (c *Client) SetAccessToken(token string) {
-	c.accessToken = token
+	c.
 }
 
 // GetUserStats - получение статистики пользователей
@@ -48,7 +54,7 @@ func (c *Client) GetUserStats(
 	limit int,
 	page int,
 ) (*UserListResponse, error) {
-	endpoint := fmt.Sprintf("%s%s/users", c.baseURL, basePath)
+	endpoint := fmt.Sprintf("%s%s/users", c.baseURL.String(), basePath)
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка формирования URL: %w", err)
@@ -129,7 +135,7 @@ func (c *Client) GetGuildStats(
 	limit int,
 	page int,
 ) (*GuildListResponse, error) {
-	endpoint := fmt.Sprintf("%s%s/guilds", c.baseURL, basePath)
+	endpoint := fmt.Sprintf("%s%s/guilds", c.baseURL.String(), basePath)
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка формирования URL: %w", err)

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"lesta-start-battleship/cli/storage/token"
 	"net/http"
 	"net/url"
 	"time"
@@ -13,13 +14,13 @@ import (
 
 // Client - клиент для взаимодействия с API инвентаря
 type Client struct {
-	baseURL     *url.URL
-	httpClient  *http.Client
-	accessToken string
+	baseURL    *url.URL
+	httpClient *http.Client
+	tokenStore *token.Storage
 }
 
 // NewClient создает новый клиент для работы с API инвентаря
-func NewClient(baseURL string) (*Client, error) {
+func NewClient(baseURL string, tokens *token.Storage) (*Client, error) {
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("некорректный базовый URL: %w", err)
@@ -30,6 +31,7 @@ func NewClient(baseURL string) (*Client, error) {
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second, // Таймаут для безопасности
 		},
+		tokenStore: tokens,
 	}, nil
 }
 
