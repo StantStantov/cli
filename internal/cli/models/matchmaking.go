@@ -47,9 +47,11 @@ func (m *MatchmakingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			switch m.selected {
 			case 0:
-				return m, nil
+				model := NewMatchmakingWaitScreenModel(m.username)
+				return model, model.Init()
 			case 1:
-				return m, nil
+				model := NewMatchmakingWaitScreenModel(m.username)
+				return model, model.Init()
 			case 2:
 				return m, nil
 			case 3:
