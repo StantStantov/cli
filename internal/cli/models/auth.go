@@ -47,23 +47,29 @@ func (m *AuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleEnter()
 
 		case tea.KeyTab:
+			m.errorMsg = ""
 			m.activeTab = (m.activeTab + 1) % 2
 			m.activeField = 0
 			return m, nil
 
 		case tea.KeyLeft:
+			m.errorMsg = ""
+			m.authMethod = 0
 			if m.activeTab == 0 {
 				m.authMethod = (m.authMethod - 1 + 3) % 3
 			}
 			return m, nil
 
 		case tea.KeyRight:
+			m.errorMsg = ""
+			m.authMethod = 0
 			if m.activeTab == 0 {
 				m.authMethod = (m.authMethod + 1) % 3
 			}
 			return m, nil
 
 		case tea.KeyDown:
+			m.errorMsg = ""
 			if m.authMethod == 0 {
 				maxField := 1
 				if m.activeTab == 1 {
@@ -76,6 +82,7 @@ func (m *AuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyUp:
+			m.errorMsg = ""
 			if m.authMethod == 0 {
 				if m.activeField > 0 {
 					m.activeField--
@@ -84,6 +91,7 @@ func (m *AuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyBackspace:
+			m.errorMsg = ""
 			if m.authMethod == 0 {
 				if m.activeField == 0 && len(m.login) > 0 {
 					m.login = m.login[:len(m.login)-1]
@@ -96,6 +104,7 @@ func (m *AuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyRunes:
+			m.errorMsg = ""
 			if m.authMethod == 0 {
 				if m.activeField == 0 {
 					m.login += string(msg.Runes)

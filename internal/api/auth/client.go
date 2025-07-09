@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"lesta-start-battleship/cli/internal/api/token"
 	"net/http"
 	"net/url"
 	"time"
@@ -38,8 +39,8 @@ func NewClient(baseURL string) (*Client, error) {
 
 // SetTokens - установка access и refresh токенов в клиенте
 func (c *Client) SetTokens(accessToken, refreshToken string) {
-	c.accessToken = accessToken
-	c.refreshToken = refreshToken
+	token.AccessToken = accessToken
+	token.RefreshToken = refreshToken
 }
 
 // doRequest HTTP запрос с заданным методом, путем и телом
@@ -61,8 +62,9 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 
 	// установка заголовков
 	req.Header.Set("Content-Type", "application/json")
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+	if token.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+		req.Header.Set("Refresh-Token", token.RefreshToken)
 	}
 
 	// выполнение запроса

@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strconv"
 	"time"
+
+	"lesta-start-battleship/cli/internal/api/token"
 )
 
 // Client - клиент для работы с API гильдий
@@ -70,8 +72,9 @@ func (c *Client) doRequest(
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+	if token.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+		req.Header.Set("Refresh-Token", token.RefreshToken)
 	}
 
 	resp, err := c.httpClient.Do(req)
