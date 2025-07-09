@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"lesta-battleship/cli/internal/app"
+	"lesta-start-battleship/cli/internal/app"
 	"log"
 	"os"
 )

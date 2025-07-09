@@ -18,7 +18,8 @@ type OAuthModel struct {
 	parent     tea.Model
 	provider   string // "google" или "yandex"
 	oauthURI   string
-	deviceCode string // Для реального OAuth, здесь будет код устройства
+	deviceCode string // код устройства
+	userCode   string
 	status     string // "waiting", "success", "error"
 	id         int
 	username   string
@@ -27,13 +28,14 @@ type OAuthModel struct {
 	Clients    *clientdeps.Client
 }
 
-func NewOAuthModel(parent tea.Model, provider string, client *clientdeps.Client, oauthURL, deviceCode string) *OAuthModel {
+func NewOAuthModel(parent tea.Model, provider string, client *clientdeps.Client, oauthURL, deviceCode, userCode string) *OAuthModel {
 	return &OAuthModel{
 		parent:     parent,
 		provider:   provider,
 		status:     "waiting",
 		oauthURI:   oauthURL,
 		deviceCode: deviceCode,
+		userCode:   userCode,
 		Clients:    client,
 	}
 }
@@ -89,7 +91,7 @@ func (m *OAuthModel) View() string {
 		sb.WriteString("1. Скопируйте ссылку:\n")
 		sb.WriteString(ui.AlertStyle.Render(m.oauthURI))
 		sb.WriteString("\n\n2. Откройте её в браузере\n\n")
-		sb.WriteString(fmt.Sprintf("3. Введите код устройства: %s\n\n", m.deviceCode))
+		sb.WriteString(fmt.Sprintf("3. Введите код устройства: %s\n\n", m.userCode))
 		sb.WriteString("3. После авторизации нажмите Enter для проверки\n\n")
 		sb.WriteString(ui.HelpStyle.Render("Enter - проверить, Esc - отмена"))
 

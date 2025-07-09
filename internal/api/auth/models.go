@@ -70,6 +70,13 @@ type DeviceCheckResponse struct {
 	Error         string           `json:"error,omitempty"`          // Описание ошибки, если есть
 }
 
+type DeviceCheckResponse2 struct {
+	AccessToken  string           `json:"access_token,omitempty"` // Токен доступа, если авторизация успешна
+	RefreshToken string           `json:"refresh_token"`
+	Status       string           `json:"status"`
+	User         *ProfileResponse `json:"user,omitempty"` // Данные пользователя, если есть
+}
+
 // UpdateUserRequest - запрос на изменение данных пользователя
 // Поля не обязательные, обновляются только измененные
 type UpdateUserRequest struct {

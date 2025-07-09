@@ -241,7 +241,7 @@ func (c *Client) InitOAuthDeviceFlow(ctx context.Context, provider string) (*Dev
 }
 
 // CheckOAuthDeviceFlow - проверка статуса авторизации
-func (c *Client) CheckOAuthDeviceFlow(ctx context.Context, provider, deviceCode string) (*DeviceCheckResponse, error) {
+func (c *Client) CheckOAuthDeviceFlow(ctx context.Context, provider, deviceCode string) (*DeviceCheckResponse2, error) {
 	var checkPath string
 	switch provider {
 	case "google":
@@ -261,17 +261,17 @@ func (c *Client) CheckOAuthDeviceFlow(ctx context.Context, provider, deviceCode 
 		return nil, fmt.Errorf("ошибка проверки статуса OAuth: %w", err)
 	}
 
-	var resp DeviceCheckResponse
+	var resp DeviceCheckResponse2
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, fmt.Errorf("ошибка декодирования ответа проверки: %w", err)
 	}
 
 	// Автоматическое определение статуса, если не задан
 	if resp.Status == "" {
-		if resp.Error != "" {
-			resp.Status = "error"
-		} else if resp.TokenResponse != nil {
+		if resp.AccessToken != "" && resp.RefreshToken != "" {
 			resp.Status = "authenticated"
+		} else if resp.User == nil {
+			resp.Status = "error"
 		} else {
 			resp.Status = "pending"
 		}
@@ -308,14 +308,19 @@ func (c *Client) CompleteOAuthPolling(
 
 			switch checkResp.Status {
 			case "authenticated":
-				tokens := checkResp.TokenResponse
-				if tokens == nil {
+				accessToken := checkResp.AccessToken
+				refreshToken := checkResp.RefreshToken
+				if accessToken == "" || refreshToken == "" {
 					return nil, nil, fmt.Errorf("токены отсутствуют в ответе")
 				}
 
 				// сохраняем токены в клиенте
-				c.SetTokens(tokens.AccessToken, tokens.RefreshToken)
+				c.SetTokens(accessToken, refreshToken)
 
+				tokens := &TokenResponse{
+					AccessToken:  accessToken,
+					RefreshToken: refreshToken,
+				}
 				var profile *ProfileResponse
 				if checkResp.User != nil {
 					// берем профиль из ответа, если он есть

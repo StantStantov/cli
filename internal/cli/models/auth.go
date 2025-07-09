@@ -224,19 +224,19 @@ func (m *AuthModel) handleEnter() (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			// логика авторизации
-			/*ctx := context.Background()
+			ctx := context.Background()
 			_, profile, err := m.Clients.AuthClient.Login(ctx, authapi.LoginRequest{Username: m.login, Password: m.password})
 			if err != nil {
 				m.errorMsg = fmt.Sprintf("Ошибка авторизации: %v", err)
 				return m, nil
-			}*/
+			}
 			return m, func() tea.Msg {
 				return AuthSuccessMsg{
-					//Username: profile.Username,
-					//Gold:     profile.Currency.Gold,
-					ID:       777,
-					Username: m.login,
-					Gold:     1000,
+					Username: profile.Username,
+					Gold:     profile.Currency.Gold,
+					ID:       profile.ID,
+					//Username: m.login,
+					//Gold:     1000,
 				}
 			}
 		} else if m.activeTab == 1 && m.activeField == 2 { // Регистрация (3 поля: логин, email, пароль)
@@ -273,6 +273,6 @@ func (m *AuthModel) handleEnter() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	return NewOAuthModel(m, provider, m.Clients, deviceAuth.VerificationURL, deviceAuth.DeviceCode), nil
+	return NewOAuthModel(m, provider, m.Clients, deviceAuth.VerificationURL, deviceAuth.DeviceCode, deviceAuth.UserCode), nil
 	//return NewOAuthModel(m, provider, m.Clients, "deviceAuth.VerificationURL", "ABCD-1234"), nil
 }
