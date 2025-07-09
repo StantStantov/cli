@@ -2,34 +2,50 @@ package models
 
 import (
 	"fmt"
-	"github.com/charmbracelet/bubbletea"
+	"lesta-start-battleship/cli/internal/api/websocket"
+	"lesta-start-battleship/cli/internal/api/websocket/packets"
+	"lesta-start-battleship/cli/internal/api/websocket/packets/guild"
+	"lesta-start-battleship/cli/internal/api/websocket/strategies"
 	"lesta-start-battleship/cli/internal/cli/handlers"
 	"lesta-start-battleship/cli/internal/cli/ui"
+	"log"
 	"strings"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
+const guildChatUrl = "ws://37.9.53.187:8000/api/v1/chat/ws/guild/%d/%d"
+
+func formatGuildChatUrl(guildId, userId int) string {
+	return fmt.Sprintf(guildChatUrl, guildId, userId)
+}
+
 type ChatComponent struct {
-	ID           int
 	Username     string
 	guildID      int
-	messages     []handlers.ChatMessage
+	messages     []*guild.ChatHistoryMessage
 	input        string
 	Focused      bool
 	scrollOffset int
 	Visible      bool
 	Width        int
 	err          error
-	wsClient     *handlers.WsClient
+	wsClient     *websocket.WebsocketClient
 }
 
-func NewChatComponent(id int, username string, guildID int) *ChatComponent {
+func NewChatComponent(username string, guildID int) *ChatComponent {
+	client, err := websocket.NewWebsocketClient(
+		formatGuildChatUrl(1, 13), nil, strategies.GuildChatStrategy{})
+	if err != nil {
+		log.Println(err)
+	}
+
 	return &ChatComponent{
-		ID:       id,
 		Username: username,
 		guildID:  guildID,
 		Width:    55,
-		wsClient: handlers.NewWsClient(),
+		wsClient: client,
 	}
 }
 
@@ -38,14 +54,16 @@ func (c *ChatComponent) Init() tea.Cmd {
 		return nil
 	}
 
-	c.wsClient = handlers.NewWsClient()
-
-	err := c.wsClient.Connect(c.guildID, c.Username)
+	client, err := websocket.NewWebsocketClient(formatGuildChatUrl(1, 13), nil, strategies.GuildChatStrategy{})
 	if err != nil {
 		return func() tea.Msg {
 			return handlers.WsErrorMsg{Err: err}
 		}
 	}
+	c.wsClient = client
+	go c.wsClient.ReadPump()
+	go c.wsClient.WritePump()
+
 	return c.waitForMessage()
 }
 
@@ -57,8 +75,7 @@ func (c *ChatComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		c.Width = msg.Width / 4
 		return c, nil
 
-	case handlers.ChatMessage:
-		msg.IsOwn = msg.Username == c.Username
+	case *guild.ChatHistoryMessage:
 		c.messages = append(c.messages, msg)
 		c.scrollToBottom()
 		return c, c.waitForMessage()
@@ -73,10 +90,14 @@ func (c *ChatComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 
 	case handlers.ReconnectMsg:
-		err := c.wsClient.Connect(c.guildID, c.Username)
+		err := c.wsClient.Connect(formatGuildChatUrl(1, 13), nil)
 		if err != nil {
 			c.err = err
+		} else {
+			go c.wsClient.ReadPump()
+			go c.wsClient.WritePump()
 		}
+
 		return c, c.waitForMessage()
 
 	case tea.KeyMsg:
@@ -89,15 +110,10 @@ func (c *ChatComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if c.input == "" {
 				return c, nil
 			}
-			newMsg := handlers.ChatMessage{
-				GuildID:   c.guildID,
-				Username:  c.Username,
-				Text:      c.input,
-				Timestamp: time.Now(),
-			}
+			newMsg := packets.WrapGuild(guild.ChatMessage{Msg: c.input})
 			c.input = ""
 			c.scrollToBottom()
-			c.wsClient.Outgoing <- newMsg
+			c.wsClient.WriteChan() <- newMsg
 			return c, tea.Batch(c.waitForMessage(),
 				func() tea.Msg { return ChatKeyHandledMsg{} },
 			)
@@ -162,12 +178,12 @@ func (c *ChatComponent) View() string {
 	}
 
 	for _, msg := range c.messages[start:end] {
-		if msg.IsOwn {
-			sb.WriteString(ui.OwnMessageStyle.Render(fmt.Sprintf("%s: %s", msg.Username, msg.Text)))
+		if msg.Username == c.Username {
+			sb.WriteString(ui.OwnMessageStyle.Render(fmt.Sprintf("%s: %s", msg.Username, msg.Content)))
 		} else if c.Focused {
-			sb.WriteString(ui.OtherMessageStyle.Render(fmt.Sprintf("%s: %s", msg.Username, msg.Text)))
+			sb.WriteString(ui.OtherMessageStyle.Render(fmt.Sprintf("%s: %s", msg.Username, msg.Content)))
 		} else {
-			sb.WriteString(ui.NewMessageStyle.Render(fmt.Sprintf("%s: %s", msg.Username, msg.Text)))
+			sb.WriteString(ui.NewMessageStyle.Render(fmt.Sprintf("%s: %s", msg.Username, msg.Content)))
 		}
 		sb.WriteString("\n")
 	}
@@ -190,22 +206,25 @@ func (c *ChatComponent) View() string {
 func (c *ChatComponent) waitForMessage() tea.Cmd {
 	return func() tea.Msg {
 		select {
-		case msg := <-c.wsClient.Incoming:
-			return msg
+		case packet := <-c.wsClient.ReadChan():
+			var unwrapped guild.Packet
+			if err := packets.UnwrapAsGuild(packet, &unwrapped); err != nil {
+			}
+			return unwrapped
 		case <-time.After(30 * time.Second):
 			return handlers.PingMsg{}
 		}
 	}
 }
 
-func (c *ChatComponent) messageExists(msg handlers.ChatMessage) bool {
-	for _, m := range c.messages {
-		if m.Username == msg.Username && m.Text == msg.Text && m.Timestamp.Equal(msg.Timestamp) {
-			return true
-		}
-	}
-	return false
-}
+// func (c *ChatComponent) messageExists(msg guild.ChatHistoryMessage) bool {
+// 	for _, m := range c.messages {
+// 		if m.Username == msg.Username && m.Text == msg.Text && m.Timestamp.Equal(msg.Timestamp) {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 func (c *ChatComponent) scrollToBottom() {
 	c.scrollOffset = 0
@@ -216,7 +235,7 @@ func (c *ChatComponent) scrollToBottom() {
 
 func (c *ChatComponent) Close() {
 	if c.wsClient != nil {
-		c.wsClient.Close()
+		c.wsClient.Stop()
 	}
 	c.Visible = false
 	c.Focused = false

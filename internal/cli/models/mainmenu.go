@@ -50,7 +50,7 @@ func (m *MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			switch m.selected {
 			case 0: // Бой
-				return m, nil
+				return NewMatchmakingModel(m.username), nil
 			case 1: // Инвентарь
 				return m, m.loadHandler
 			case 2: // Магазин
