@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
-	"lesta-start-battleship/cli/internal/api/guilds"
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"lesta-start-battleship/cli/internal/clientdeps"
-	guildStore "lesta-start-battleship/cli/store/guild"
+	guildStore "lesta-start-battleship/cli/storage/guild"
 	"strings"
 )
 
@@ -72,9 +71,7 @@ func (m *ExitGuildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case GuildExitedMsg:
-		guildStore.Self = guilds.MemberResponse{}
-		guildStore.GuildList = nil
-		guildStore.Members = nil
+		guildStore.CleanStorage()
 		return NewGuildModel(m.id, m.username, m.gold, nil, nil, m.Client), nil
 
 	case error:
@@ -115,7 +112,7 @@ func (m *ExitGuildModel) View() string {
 		sb.WriteString(ui.ErrorStyle.Render("Вы уверены, что хотите покинуть гильдию?"))
 		sb.WriteString("\n\n")
 		sb.WriteString(fmt.Sprintf("Гильдия: [%s] %s\n\n", m.guildTag, m.guildName))
-		sb.WriteString(ui.NormalStyle.Render("Enter - подтвердить, Esc - отмена"))
+		sb.WriteString(ui.HelpStyle.Render("Enter - подтвердить, Esc - отмена"))
 	}
 
 	return sb.String()

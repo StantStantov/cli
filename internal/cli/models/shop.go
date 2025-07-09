@@ -85,7 +85,7 @@ func (m *ShopModel) View() string {
 
 	sb.WriteString(ui.TitleStyle.Render("Магазин"))
 	sb.WriteString("\n")
-	sb.WriteString(ui.NormalStyle.Render(fmt.Sprintf("Пользователь: %s					Balance: %d 💰", m.username, m.items.Balance)))
+	sb.WriteString(ui.NormalStyle.Render(fmt.Sprintf("Пользователь: %s					Balance: %d 💰", m.username, m.gold)))
 	sb.WriteString("\n\n")
 
 	// Отображение категорий
@@ -122,7 +122,7 @@ func (m *ShopModel) View() string {
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(ui.NormalStyle.Render("←/→ - переключение категорий, ↑/↓ - выбор, Enter - купить, Esc - назад"))
+	sb.WriteString(ui.HelpStyle.Render("←/→ - переключение категорий, ↑/↓ - выбор, Enter - купить, Esc - назад"))
 
 	return sb.String()
 }

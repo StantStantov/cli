@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"lesta-start-battleship/cli/internal/cli/models"
 	"lesta-start-battleship/cli/internal/clientdeps"
+	guildStorage "lesta-start-battleship/cli/storage/guild"
 )
 
 type CLI struct {
@@ -52,6 +53,7 @@ func (a *CLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.userID = 0
 		a.gold = 0
 		a.username = ""
+		guildStorage.CleanStorage()
 		a.currentScreen = models.NewAuthModel(a.clients)
 		a.chatComponent.Close()
 		a.chatComponent = models.NewChatComponent(0, "", 0)

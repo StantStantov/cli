@@ -7,7 +7,7 @@ import (
 	"lesta-start-battleship/cli/internal/api/guilds"
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"lesta-start-battleship/cli/internal/clientdeps"
-	guildStore "lesta-start-battleship/cli/store/guild"
+	guildStorage "lesta-start-battleship/cli/storage/guild"
 	"strings"
 )
 
@@ -240,7 +240,7 @@ func (m *MembersListModel) handleNormalMode(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errorMsg = "Участники не найдены"
 		}
 		for _, member := range m.members {
-			guildStore.SetMember(member.UserName, member)
+			guildStorage.SetMember(member.UserName, member)
 		}
 		return m, nil
 

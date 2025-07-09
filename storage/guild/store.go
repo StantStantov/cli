@@ -15,7 +15,10 @@ var (
 	Self guilds.MemberResponse
 
 	// Список гильдий: guild_tag -> GuildResponse
-	GuildList = make(map[string]guilds.GuildResponse)
+	GuildListTag = make(map[string]guilds.GuildResponse)
+
+	// Список гильдий: guild_id -> GuildResponse
+	GuildListID = make(map[int]guilds.GuildResponse)
 )
 
 func SetMember(username string, member guilds.MemberResponse) {
@@ -40,12 +43,30 @@ func SetSelf(member guilds.MemberResponse) {
 func SetGuild(guildTag string, guild guilds.GuildResponse) {
 	mu.Lock()
 	defer mu.Unlock()
-	GuildList[guildTag] = guild
+	GuildListTag[guildTag] = guild
 }
 
 func GetGuild(guildTag string) (guilds.GuildResponse, bool) {
 	mu.RLock()
 	defer mu.RUnlock()
-	val, ok := GuildList[guildTag]
+	val, ok := GuildListTag[guildTag]
+	return val, ok
+}
+
+func CleanStorage() {
+	Self = guilds.MemberResponse{}
+	Members = nil
+}
+
+func SetGuildID(guildId int, guild guilds.GuildResponse) {
+	mu.Lock()
+	defer mu.Unlock()
+	GuildListID[guildId] = guild
+}
+
+func GetGuildID(guildId int) (guilds.GuildResponse, bool) {
+	mu.RLock()
+	defer mu.RUnlock()
+	val, ok := GuildListID[guildId]
 	return val, ok
 }

@@ -229,7 +229,7 @@ func (m *EditProfileModel) View() string {
 	}
 
 	sb.WriteString("\n\n")
-	sb.WriteString(ui.NormalStyle.Render("Tab - переключение вкладок, Enter - подтвердить, Esc - назад"))
+	sb.WriteString(ui.HelpStyle.Render("Tab - переключение вкладок, Enter - подтвердить, Esc - назад"))
 
 	return sb.String()
 }

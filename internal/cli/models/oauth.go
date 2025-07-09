@@ -47,28 +47,16 @@ func (m *OAuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
-			/*switch m.status {
+			switch m.status {
 			case "waiting", "error":
 				m.status = "pending"
 				m.errorMsg = ""
 				return m, m.pollingOAuth()
 			case "success":
-				return NewMainMenuModel(m.id, m.username, m.gold), nil
+				return NewMainMenuModel(m.id, m.username, m.gold, m.Clients), nil
 			case "pending":
 				return m, nil
-			}*/
-			if m.status == "waiting" {
-				// В реальности здесь будет API запрос
-				// Сейчас просто ручной ввод
-				//m.status = "pending"
-				m.errorMsg = ""
-
-				return m, func() tea.Msg { return OAuthPollingResultMsg{Error: "Пользователь не найден"} } // Здесь будет реальный результат
-			} else if m.status == "error" {
-				return NewMainMenuModel(m.id, m.username, m.gold, m.Clients), nil
 			}
-			// После успеха/ошибки Enter возвращает в родительское меню
-			return m.parent, nil
 
 		case tea.KeyEsc:
 			return m.parent, nil

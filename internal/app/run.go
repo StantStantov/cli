@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	authURL       = "http://37.9.53.236/auth"
-	guildsURL     = "http://37.9.53.236/guild"
-	inventoryURL  = "http://37.9.53.236/inventory"
-	scoreboardURL = "http://37.9.53.236/scoreboard"
-	shopURL       = "http://37.9.53.236/shop"
+	authURL       = "https://battleship-lesta-start.ru/"
+	guildsURL     = "https://battleship-lesta-start.ru/guild/"
+	inventoryURL  = "https://battleship-lesta-start.ru/inventory/"
+	scoreboardURL = "https://battleship-lesta-start.ru/scoreboard/"
+	shopURL       = "https://battleship-lesta-start.ru/shop/"
 )
 
 type App struct {

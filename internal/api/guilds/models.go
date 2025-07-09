@@ -4,23 +4,24 @@ import "time"
 
 // константы путей API
 const (
-	PathGetMemberByUserID = "/api/v1/guild/member/member/%d"
-	PathGetGuildByTag     = "/api/v1/guild/%s"
-	PathSendJoinRequest   = "/api/v1/guild/request/%s"
-	PathGetJoinRequests   = "/api/v1/guild/request/%s"
-	PathApplyJoinRequest  = "/api/v1/guild/request/%s/%d/apply"
-	PathCancelJoinRequest = "/api/v1/guild/request/%s/%d/cancel"
-	PathCreateGuild       = "/api/v1/guild/"
-	PathDeleteGuild       = "/api/v1/guild/%s"
-	PathGetGuildMembers   = "/api/v1/guild/member/%s"
-	PathDeleteMember      = "/api/v1/guild/member/%s/%d"
-	PathEditMember        = "/api/v1/guild/member/%s/%d"
-	PathExitGuild         = "/api/v1/guild/member/%s/exit/%d"
-	PathDeclareWar        = "/api/v1/guild/war/declare"
-	PathConfirmWar        = "/api/v1/guild/war/confirm/%d"
-	PathCancelWar         = "/api/v1/guild/war/cancel/%d"
-	PathListGuildWars     = "/api/v1/guild/war/list"
-	PathGetGuilds         = "/api/v1/guild/"
+	PathGetMemberByUserID = "member/member/%d"
+	PathGetGuildByTag     = "/%s"
+	PathSendJoinRequest   = "/request/%s"
+	PathGetJoinRequests   = "/request/%s"
+	PathApplyJoinRequest  = "/request/%s/%d/apply"
+	PathCancelJoinRequest = "request/%s/%d/cancel"
+	PathCreateGuild       = "/"
+	PathDeleteGuild       = "/%s"
+	PathGetGuildMembers   = "/member/%s"
+	PathDeleteMember      = "/member/%s/%d"
+	PathEditMember        = "/member/%s/%d"
+	PathExitGuild         = "/member/%s/exit/%d"
+	PathDeclareWar        = "/war/declare"
+	PathConfirmWar        = "/war/confirm/%d"
+	PathCancelWar         = "/war/cancel/%d"
+	PathListGuildWars     = "/war/list"
+	PathGetGuilds         = "/"
+	PathEditGuild         = "/%s"
 )
 
 // Role - роль участника гильдии
@@ -127,6 +128,12 @@ type CreateGuildRequest struct {
 type EditMemberRequest struct {
 	RoleID   int    `json:"role_id"`   // id новой роли
 	UserName string `json:"user_name"` // Новое имя (опционально)
+}
+
+// EditGuildRequest - запрос на изменение гильдии
+type EditGuildRequest struct {
+	Title       string `json:"title"`       // Новое название гильдии
+	Description string `json:"description"` // Новое описание гильдии
 }
 
 // WarStatus - статус войны гильдий

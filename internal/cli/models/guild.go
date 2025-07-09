@@ -1,27 +1,35 @@
 package models
 
 import (
+	"context"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"lesta-start-battleship/cli/internal/api/guilds"
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"lesta-start-battleship/cli/internal/clientdeps"
+	guildStorage "lesta-start-battleship/cli/storage/guild"
 	"strings"
 )
 
 type GuildModel struct {
-	id       int
-	username string
-	gold     int
-	Member   *guilds.MemberResponse
-	Guild    *guilds.GuildResponse
-	selected int
-	loading  bool
-	errorMsg string
-	Clients  *clientdeps.Client
+	id            int
+	username      string
+	gold          int
+	Member        *guilds.MemberResponse
+	Guild         *guilds.GuildResponse
+	selected      int
+	inputGuildTag string // Тег гильдии
+	deleteMode    bool   // Режим удаления гильдии
+	isJoining     bool   // Режим вступления в гильдию
+	isDeclareWar  bool   // Режим объявления войны
+	loading       bool
+	errorMsg      string
+	successMsg    string
+	Clients       *clientdeps.Client
 }
 
-func NewGuildModel(id int, username string, gold int, member *guilds.MemberResponse, guild *guilds.GuildResponse, clients *clientdeps.Client) *GuildModel {
+func NewGuildModel(id int, username string, gold int, member *guilds.MemberResponse, guild *guilds.GuildResponse,
+	clients *clientdeps.Client) *GuildModel {
 	return &GuildModel{
 		id:       id,
 		username: username,
@@ -37,6 +45,14 @@ func (m *GuildModel) Init() tea.Cmd {
 }
 
 func (m *GuildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.isJoining {
+		return m.handleJoinInput(msg)
+	}
+
+	if m.isDeclareWar {
+		return m.handleDeclareWare(msg)
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.loading {
@@ -45,21 +61,75 @@ func (m *GuildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch msg.Type {
 		case tea.KeyUp:
+			if m.deleteMode {
+				return m, nil
+			}
 			menuItems := m.getMenuItems()
 			m.selected = (m.selected - 1 + len(menuItems)) % len(menuItems)
 			return m, nil
 
 		case tea.KeyDown:
+			if m.deleteMode {
+				return m, nil
+			}
 			menuItems := m.getMenuItems()
 			m.selected = (m.selected + 1) % len(menuItems)
 			return m, nil
 
 		case tea.KeyEnter:
-			return m.handleMenuSelection()
+			menuItems := m.getMenuItems()
+			if len(menuItems) == 0 {
+				return m, nil
+			}
+
+			selectedItem := menuItems[m.selected]
+
+			if selectedItem == "Удалить гильдию" {
+				if m.deleteMode {
+					m.loading = true
+					return m, func() tea.Msg {
+						ctx := context.Background()
+						err := m.Clients.GuildsClient.DeleteGuild(ctx, m.Guild.Tag, m.id)
+						if err != nil {
+							return err
+						}
+						return GuildDeletedMsg{}
+					}
+				} else {
+					m.deleteMode = true
+					return m, nil
+				}
+			} else {
+				return m.handleMenuSelection()
+			}
 
 		case tea.KeyEsc:
+			if m.deleteMode {
+				m.deleteMode = false
+				return m, nil
+			}
+			m.successMsg = ""
+			m.errorMsg = ""
 			return NewMainMenuModel(m.id, m.username, m.gold, m.Clients), nil
 		}
+
+	case JoinRequestSentMsg:
+		m.isJoining = false
+		m.successMsg = fmt.Sprintf("Запрос в гильдию [%s] отправлен", m.inputGuildTag)
+		m.inputGuildTag = ""
+		return m, nil
+
+	case GuildDeletedMsg:
+		guildStorage.CleanStorage()
+		m.successMsg = "Гильдия успешно удалена"
+		return NewGuildModel(m.id, m.username, m.gold, nil, nil, m.Clients),
+			func() tea.Msg {
+				return m.successMsg
+			}
+
+	case DeclareWarMsg:
+		m.successMsg = "Объявление войны успешно отправлено"
+		return m, nil
 	}
 
 	return m, nil
@@ -86,12 +156,28 @@ func (m *GuildModel) View() string {
 	sb.WriteString("\n")
 	menuItems := m.getMenuItems()
 	for i, item := range menuItems {
-		if i == m.selected {
-			sb.WriteString(ui.SelectedStyle.Render("> " + item))
-		} else {
-			sb.WriteString(" " + item)
+		line := " " + item
+
+		if i == m.selected && item == "Вступить в гильдию" && m.isJoining {
+			line = ui.SelectedStyle.Render("> Вступить в гильдию: " + m.inputGuildTag)
+		} else if i == m.selected && item == "Объявить войну" && m.isDeclareWar {
+			line = ui.SelectedStyle.Render("> Объявить войну: " + m.inputGuildTag)
+		} else if i == m.selected {
+			line = ui.SelectedStyle.Render("> " + item)
 		}
+
+		sb.WriteString(line)
 		sb.WriteString("\n")
+	}
+
+	if m.deleteMode {
+		sb.WriteString("\n")
+		sb.WriteString(ui.ErrorStyle.Render("Вы уверены, что хотите удалить гильдию? Нажмите Enter для подтверждения"))
+	}
+
+	if m.successMsg != "" {
+		sb.WriteString("\n")
+		sb.WriteString(ui.SuccessStyle.Render(m.successMsg))
 	}
 
 	if m.errorMsg != "" {
@@ -99,7 +185,13 @@ func (m *GuildModel) View() string {
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(ui.NormalStyle.Render("↑/↓ - выбор, Enter - подтвердить, Esc - назад"))
+	helpText := "↑/↓ - выбор"
+	if m.isJoining {
+		helpText += ", Enter - отправить запрос, Esc - отмена"
+	} else {
+		helpText += ", Enter - подтвердить, Esc - назад"
+	}
+	sb.WriteString(ui.HelpStyle.Render(helpText))
 
 	return sb.String()
 }
@@ -147,20 +239,98 @@ func (m *GuildModel) handleMenuSelection() (tea.Model, tea.Cmd) {
 	case "Покинуть гильдию":
 		return NewExitGuildModel(m, m.id, m.username, m.gold, m.Guild.Tag, m.Guild.Title, m.Clients), nil
 	case "Объявить войну":
+		m.isDeclareWar = true
+		m.inputGuildTag = ""
 		return m, nil
 	case "Запросы на войну":
-		return m, nil
+		return NewWarRequestsModel(m, m.id, m.username, m.Guild.Tag, m.Guild.Title, m.Guild.ID, m.Clients), nil
 	case "Изменить гильдию":
-		return m, nil
+		return NewEditGuildModel(m, m.id, m.username, m.gold, m.Guild.Tag, m.Guild.Title, m.Guild.Description, m.Clients), nil
 	case "Запросы на вступление":
-		return m, nil
-	case "Удалить гильдию":
-		return m, nil
+		return NewJoinRequestsModel(m, m.id, m.username, m.Guild.Tag, m.Guild.Title, m.Clients), nil
 	case "Создать гильдию":
-		return m, nil
+		return NewCreateGuildModel(m, m.id, m.username, m.gold, m.Clients), nil
 	case "Вступить в гильдию":
+		m.isJoining = true
+		m.inputGuildTag = ""
 		return m, nil
 	default:
 		return m, nil
 	}
+}
+
+func (m *GuildModel) handleJoinInput(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyEnter:
+			m.loading = true
+			return m, func() tea.Msg {
+				ctx := context.Background()
+				err := m.Clients.GuildsClient.SendJoinRequest(ctx, m.inputGuildTag, m.id)
+				if err != nil {
+					return err
+				}
+				return JoinRequestSentMsg{}
+			}
+
+		case tea.KeyBackspace:
+			if len(m.inputGuildTag) > 0 {
+				m.inputGuildTag = m.inputGuildTag[:len(m.inputGuildTag)-1]
+			}
+			return m, nil
+
+		case tea.KeyRunes:
+			m.inputGuildTag += string(msg.Runes)
+			return m, nil
+
+		case tea.KeyEsc:
+			m.isJoining = false
+			m.inputGuildTag = ""
+			m.errorMsg = ""
+			return m, nil
+		}
+	}
+	return m, nil
+}
+
+func (m *GuildModel) handleDeclareWare(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyEnter:
+			m.loading = true
+			return m, func() tea.Msg {
+				targetGuild, ok := guildStorage.GetGuild(m.inputGuildTag)
+				if !ok {
+					m.loading = false
+					m.errorMsg = fmt.Sprintf("Гильдия с тегом [%s] не найдена", m.inputGuildTag)
+					return nil
+				}
+				ctx := context.Background()
+				_, err := m.Clients.GuildsClient.DeclareWar(ctx, m.Guild.ID, targetGuild.ID, m.id)
+				if err != nil {
+					return err
+				}
+				return DeclareWarMsg{}
+			}
+
+		case tea.KeyBackspace:
+			if len(m.inputGuildTag) > 0 {
+				m.inputGuildTag = m.inputGuildTag[:len(m.inputGuildTag)-1]
+			}
+			return m, nil
+
+		case tea.KeyRunes:
+			m.inputGuildTag += string(msg.Runes)
+			return m, nil
+
+		case tea.KeyEsc:
+			m.isDeclareWar = false
+			m.inputGuildTag = ""
+			m.errorMsg = ""
+			return m, nil
+		}
+	}
+	return m, nil
 }

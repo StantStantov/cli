@@ -7,7 +7,7 @@ import (
 	"lesta-start-battleship/cli/internal/api/guilds"
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"lesta-start-battleship/cli/internal/clientdeps"
-	guildStore "lesta-start-battleship/cli/store/guild"
+	guildStorage "lesta-start-battleship/cli/storage/guild"
 	"strings"
 )
 
@@ -64,17 +64,14 @@ func (m *GuildListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case *guilds.GuildPagination:
 		m.loading = false
-		var activeGuilds []guilds.GuildResponse
 		for _, guild := range msg.Items {
-			if guild.IsActive {
-				activeGuilds = append(activeGuilds, guild)
-				guildStore.SetGuild(guild.Tag, guild)
-			}
+			guildStorage.SetGuild(guild.Tag, guild)
+			guildStorage.SetGuildID(guild.ID, guild)
 		}
-		m.guilds = activeGuilds
+		m.guilds = msg.Items
 		m.totalPages = msg.TotalPages
 		if len(m.guilds) == 0 {
-			m.errorMsg = "Нет активных гильдий"
+			m.errorMsg = "Список гильдий пуст"
 		}
 		return m, nil
 
@@ -104,13 +101,15 @@ func (m *GuildListModel) View() string {
 	}
 
 	if len(m.guilds) == 0 {
-		sb.WriteString(ui.NormalStyle.Render("Нет активных гильдий"))
+		sb.WriteString(ui.NormalStyle.Render("Список гильдий пуст"))
 	} else {
 		for _, guild := range m.guilds {
 			line := fmt.Sprintf("%s - %s [%s]", guild.Title, guild.Description, guild.Tag)
 
 			if guild.IsFull {
 				sb.WriteString(ui.ErrorStyle.Render(line + " (Полная)\n"))
+			} else if !guild.IsActive {
+				sb.WriteString(ui.WarningStyle.Render(line + " (Не участвует в войне)\n"))
 			} else {
 				sb.WriteString(ui.NormalStyle.Render(line + "\n"))
 			}

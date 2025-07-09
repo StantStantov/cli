@@ -106,9 +106,9 @@ func (m *InventoryModel) View() string {
 
 	sb.WriteString("\n")
 	if m.showDetails {
-		sb.WriteString(ui.NormalStyle.Render("Enter - назад, Esc - в меню"))
+		sb.WriteString(ui.HelpStyle.Render("Enter - назад, Esc - в меню"))
 	} else {
-		sb.WriteString(ui.NormalStyle.Render("↑/↓ - выбор, Enter - подробности, Esc - в меню"))
+		sb.WriteString(ui.HelpStyle.Render("↑/↓ - выбор, Enter - подробности, Esc - в меню"))
 	}
 
 	return sb.String()

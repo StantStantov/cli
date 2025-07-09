@@ -164,9 +164,7 @@ func (m *JoinRequestsModel) handleConfirmState(msg tea.Msg) (tea.Model, tea.Cmd)
 func (m *JoinRequestsModel) View() string {
 	var sb strings.Builder
 
-	sb.WriteString(ui.TitleStyle.Render(fmt.Sprintf("Заявки на вступление в [%s]", m.guildTag)))
-	sb.WriteString("\n")
-	sb.WriteString(ui.NormalStyle.Render(fmt.Sprintf("Гильдия: %s", m.guildName)))
+	sb.WriteString(ui.TitleStyle.Render(fmt.Sprintf("Заявки на вступление в гильдию %s [%s]", m.guildName, m.guildTag)))
 	sb.WriteString("\n")
 	sb.WriteString(ui.NormalStyle.Render(fmt.Sprintf("Страница %d/%d", m.currentPage, m.totalPages)))
 	sb.WriteString("\n\n")
@@ -206,7 +204,7 @@ func (m *JoinRequestsModel) View() string {
 
 	sb.WriteString("\n")
 	helpText := "↑/↓ - выбор, ←/→ - страницы, Enter - действия, Esc - назад"
-	sb.WriteString(ui.NormalStyle.Render(helpText))
+	sb.WriteString(ui.HelpStyle.Render(helpText))
 
 	return sb.String()
 }
@@ -218,11 +216,11 @@ func (m *JoinRequestsModel) renderConfirmView() string {
 	sb.WriteString(ui.TitleStyle.Render("Обработка заявки"))
 	sb.WriteString("\n\n")
 	sb.WriteString(fmt.Sprintf("Игрок ID: %d\n\n", selectedReq.UserID))
-	sb.WriteString(ui.NormalStyle.Render("Enter - принять заявку"))
+	sb.WriteString(ui.HelpStyle.Render("Enter - принять заявку"))
 	sb.WriteString("\n")
-	sb.WriteString(ui.NormalStyle.Render("Backspace - отклонить заявку"))
+	sb.WriteString(ui.HelpStyle.Render("Backspace - отклонить заявку"))
 	sb.WriteString("\n")
-	sb.WriteString(ui.NormalStyle.Render("Esc - отмена"))
+	sb.WriteString(ui.HelpStyle.Render("Esc - отмена"))
 
 	return sb.String()
 }

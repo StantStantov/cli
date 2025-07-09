@@ -4,34 +4,6 @@ import (
 	"lesta-start-battleship/cli/internal/api/guilds"
 )
 
-type LoginWithOAuthMsg struct {
-	Provider string
-}
-
-type RegisterWithPasswordMsg struct {
-	Login    string
-	Password string
-}
-
-type OAuthStartMsg struct {
-	Provider string
-	IsLogin  bool
-}
-
-type OAuthURIMsg struct {
-	URI      string
-	Provider string
-	IsLogin  bool
-}
-
-type OAuthStatusCheckMsg struct {
-	Provider string
-}
-
-type OAuthCancelMsg struct{}
-
-type OAuthTimeoutMsg struct{}
-
 type OAuthPollingResultMsg struct {
 	ID       int
 	Username string
@@ -78,5 +50,23 @@ type MemberDeleteMsg struct {
 type GuildExitedMsg struct{}
 
 type RequestProcessedMsg struct {
+	Message string
+}
+
+type GuildCreatedMsg struct {
+	Guild *guilds.GuildResponse
+}
+
+type JoinRequestSentMsg struct{}
+
+type GuildEditMsg struct {
+	Guild *guilds.GuildResponse
+}
+
+type GuildDeletedMsg struct{}
+
+type DeclareWarMsg struct{}
+
+type WarRequestProcessedMsg struct {
 	Message string
 }

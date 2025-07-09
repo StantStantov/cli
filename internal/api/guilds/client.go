@@ -196,6 +196,21 @@ func (c *Client) CreateGuild(ctx context.Context, userID int, req CreateGuildReq
 	return resp.Value, nil
 }
 
+// editGuild - изменить данные гильдии (owner)
+func (c *Client) EditGuild(ctx context.Context, tag string, userID int, req EditGuildRequest) (*GuildResponse, error) {
+	path := fmt.Sprintf(PathEditGuild, tag)
+	params := map[string]string{"user_id": strconv.Itoa(userID)}
+	body, err := c.doRequest(ctx, "PATCH", path, params, &req)
+	if err != nil {
+		return nil, err
+	}
+	var resp ResponseGuild
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Value, nil
+}
+
 // DeleteGuild - удалить свою гильдию (owner)
 func (c *Client) DeleteGuild(ctx context.Context, tag string, userID int) error {
 	path := fmt.Sprintf(PathDeleteGuild, tag)
@@ -246,12 +261,8 @@ func (c *Client) ExitGuild(ctx context.Context, tag string, userID int) error {
 }
 
 // DeclareWar - объявление войны другой гильдии (вызвать может только владелец гильдии-инициатора)
-func (c *Client) DeclareWar(
-	ctx context.Context,
-	initiatorGuildID int,
-	targetGuildID int,
-	ownerID int,
-) (*DeclareWarResponse, error) {
+func (c *Client) DeclareWar(ctx context.Context, initiatorGuildID int,
+	targetGuildID int, ownerID int) (*DeclareWarResponse, error) {
 	reqBody := DeclareWarRequest{
 		InitiatorGuildID: initiatorGuildID,
 		TargetGuildID:    targetGuildID,
@@ -272,11 +283,7 @@ func (c *Client) DeclareWar(
 }
 
 // ConfirmWar - подтверждение войны гильдией, которую вызывают (вызвать может только владелец гильдии-цели)
-func (c *Client) ConfirmWar(
-	ctx context.Context,
-	warID int,
-	targetOwnerID int,
-) (*ConfirmWarResponse, error) {
+func (c *Client) ConfirmWar(ctx context.Context, warID int, targetOwnerID int) (*ConfirmWarResponse, error) {
 	path := fmt.Sprintf(PathConfirmWar, warID)
 	reqBody := ConfirmWarRequest{TargetOwnerID: targetOwnerID}
 
@@ -294,11 +301,7 @@ func (c *Client) ConfirmWar(
 }
 
 // CancelWar - отменяет активную или войну в статусе ожидания (вызвать может владелец гильдии-участника с любой стороны)
-func (c *Client) CancelWar(
-	ctx context.Context,
-	warID int,
-	ownerID int,
-) (*CancelWarResponse, error) {
+func (c *Client) CancelWar(ctx context.Context, warID int, ownerID int) (*CancelWarResponse, error) {
 	path := fmt.Sprintf(PathCancelWar, warID)
 	reqBody := CancelWarRequest{OwnerID: ownerID}
 

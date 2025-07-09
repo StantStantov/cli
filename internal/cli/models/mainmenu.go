@@ -8,7 +8,7 @@ import (
 	"lesta-start-battleship/cli/internal/cli/handlers"
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"lesta-start-battleship/cli/internal/clientdeps"
-	guildStore "lesta-start-battleship/cli/store/guild"
+	guildStorage "lesta-start-battleship/cli/storage/guild"
 	"strings"
 )
 
@@ -61,7 +61,7 @@ func (m *MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case 4: // Редактирование профиля
 				return NewEditProfileModel(m.id, m.username, m.gold, m.Clients), nil
 			case 5: // Рейтинг
-				return m, m.loadHandler
+				return NewScoreboardModel(m, m.id, m.username, m.gold, m.Clients), nil
 			}
 			return m, nil
 
@@ -85,7 +85,7 @@ func (m *MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return NewGuildModel(m.id, m.username, m.gold, nil, nil, m.Clients), nil
 
 	case handlers.PlayerStats:
-		return NewScoreboardModel(m.id, m.username, m.gold, msg, m.Clients), nil
+		return NewScoreboardModel(m, m.id, m.username, m.gold, m.Clients), nil
 	}
 
 	return m, nil
@@ -122,7 +122,7 @@ func (m *MainMenuModel) View() string {
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(ui.NormalStyle.Render("↑/↓ - выбор, Enter - подтвердить, Esc - выход"))
+	sb.WriteString(ui.HelpStyle.Render("↑/↓ - выбор, Enter - подтвердить, Esc - выход"))
 
 	return sb.String()
 }
@@ -144,12 +144,6 @@ func (m *MainMenuModel) loadHandler() tea.Msg {
 			return err
 		}
 		return items
-	case 5:
-		stats, err := handlers.MyStatsHandler(token)
-		if err != nil {
-			return err
-		}
-		return stats
 	}
 	return nil
 }
@@ -162,7 +156,7 @@ func (m *MainMenuModel) guildHandler() tea.Msg {
 		// Не состоит в гильдии
 		return GuildNoMemberMsg{}
 	}
-	guildStore.Self = *member
+	guildStorage.Self = *member
 	guild, err := m.Clients.GuildsClient.GetGuildByTag(ctx, member.GuildTag)
 	if err != nil || guild == nil {
 		return GuildNoMemberMsg{}

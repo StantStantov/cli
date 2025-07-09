@@ -200,8 +200,8 @@ func (m *AuthModel) View() string {
 		sb.WriteString(ui.ErrorStyle.Render(m.errorMsg + "\n"))
 	}
 
-	sb.WriteString(ui.NormalStyle.Render("\nTab - Авторизация/Регистрация, ←/→ - выбор метода, Enter - подтвердить"))
-	sb.WriteString(ui.NormalStyle.Render("\n↑/↓ - Переключение полей, Esc/Ctrl+C - выход\n"))
+	sb.WriteString(ui.HelpStyle.Render("\nTab - Авторизация/Регистрация, ←/→ - выбор метода, Enter - подтвердить"))
+	sb.WriteString(ui.HelpStyle.Render("\n↑/↓ - Переключение полей, Esc/Ctrl+C - выход\n"))
 
 	return sb.String()
 }
@@ -266,13 +266,13 @@ func (m *AuthModel) handleEnter() (tea.Model, tea.Cmd) {
 
 	// OAuth авторизация
 	provider := []string{"", "google", "yandex"}[m.authMethod]
-	/*ctx := context.Background()
+	ctx := context.Background()
 	deviceAuth, err := m.Clients.AuthClient.InitOAuthDeviceFlow(ctx, provider)
 	if err != nil {
 		m.errorMsg = fmt.Sprintf("Ошибка авторизации через %s: %v", provider, err)
 		return m, nil
-	}*/
+	}
 
-	//return NewOAuthModel(m, provider, m.authClient, deviceAuth.VerificationURL, deviceAuth.DeviceCode), nil
-	return NewOAuthModel(m, provider, m.Clients, "deviceAuth.VerificationURL", "ABCD-1234"), nil
+	return NewOAuthModel(m, provider, m.Clients, deviceAuth.VerificationURL, deviceAuth.DeviceCode), nil
+	//return NewOAuthModel(m, provider, m.Clients, "deviceAuth.VerificationURL", "ABCD-1234"), nil
 }

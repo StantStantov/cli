@@ -11,6 +11,7 @@ var (
 	NormalStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#E0E0E0"))
 	SelectedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD600")).Bold(true)
 	SubtitleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500))")).Bold(true)
+	WarningStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9800")).Bold(true)
 
 	AlertStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")).
 			Background(lipgloss.Color("#330000")).Bold(true).Padding(0, 1)

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	basePath = "/api/v1/scoreboard"
+	basePath = "/"
 )
 
 // Client - клиент для работы с Scoreboard

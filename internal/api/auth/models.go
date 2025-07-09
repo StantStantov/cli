@@ -2,17 +2,17 @@ package auth
 
 // Константы путей API
 const (
-	LoginPath        = "/api/v1/auth/login/"
-	GoogleInitPath   = "/api/v1/auth/google/device/init"
-	GoogleCheckPath  = "/api/v1/auth/google/device/check"
-	YandexInitPath   = "/api/v1/auth/yandex/device/init"
-	YandexCheckPath  = "/api/v1/auth/yandex/device/check"
-	GetProfilePath   = "/api/v1/users/%d"
-	RefreshTokenPath = "/api/v1/auth/refresh_token/"
-	UpdateUserPath   = "/api/v1/users/%d"
-	DeleteUserPath   = "/api/v1/users/%d"
-	LogoutPath       = "/api/v1/users/logout/"
-	RegistrationPath = "/api/v1/auth/registration/"
+	LoginPath        = "auth/login/"
+	GoogleInitPath   = "auth/google/device/init"
+	GoogleCheckPath  = "auth/google/device/check"
+	YandexInitPath   = "auth/yandex/device/init"
+	YandexCheckPath  = "auth/yandex/device/check"
+	GetProfilePath   = "users/%d"
+	RefreshTokenPath = "auth/refresh_token/"
+	UpdateUserPath   = "users/%d"
+	DeleteUserPath   = "users/%d"
+	LogoutPath       = "users/logout/"
+	RegistrationPath = "auth/registration/"
 )
 
 // UserRegRequest - запрос на регистрацию пользователя
