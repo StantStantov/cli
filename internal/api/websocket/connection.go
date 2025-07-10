@@ -2,7 +2,7 @@ package websocket
 
 import (
 	"fmt"
-	"lesta-battleship/cli/internal/api/websocket/packets"
+	"lesta-start-battleship/cli/internal/api/websocket/packets"
 	"net/http"
 
 	"github.com/gorilla/websocket"
