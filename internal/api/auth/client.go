@@ -18,7 +18,7 @@ type Client struct {
 	baseURL    *url.URL
 	httpClient *http.Client
 	tokenStore *token.Storage
-	userID int
+	userID     int
 }
 
 // NewClient - создание клиента для работы с API
@@ -71,7 +71,10 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 	defer resp.Body.Close()
 
 	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
-
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
 	}
 
 	// чтение тела ответа
@@ -130,7 +133,7 @@ func (c *Client) Register(ctx context.Context, req UserRegRequest) (*TokenRespon
 	}
 
 	// установка токенов в клиент
-	c.(resp.AccessToken, resp.RefreshToken)
+	c.tokenStore.SetTokens(resp.AccessToken, resp.RefreshToken)
 
 	profile, err := c.GetProfile(ctx)
 	if err == nil {
@@ -153,7 +156,7 @@ func (c *Client) Login(ctx context.Context, req LoginRequest) (*TokenResponse, *
 	}
 
 	// установка токенов в клиент
-	c.SetTokens(resp.AccessToken, resp.RefreshToken)
+	c.tokenStore.SetTokens(resp.AccessToken, resp.RefreshToken)
 
 	profile, err := c.GetProfile(ctx)
 	if err == nil {
@@ -188,9 +191,9 @@ func (c *Client) RefreshToken(ctx context.Context) (*TokenResponse, error) {
 }
 
 // GetProfile - получение профиля текущего пользователя
-func (c *Client) GetProfile(ctx context.Context, userID int) (*ProfileResponse, error) {
-	path := fmt.Sprintf(GetProfilePath, userID)
-	if userID == 0 {
+func (c *Client) GetProfile(ctx context.Context) (*ProfileResponse, error) {
+	path := fmt.Sprintf(GetProfilePath, c.userID)
+	if c.userID == 0 {
 		return nil, fmt.Errorf("user id not set")
 	}
 
@@ -305,23 +308,24 @@ func (c *Client) CompleteOAuthPolling(
 
 			switch checkResp.Status {
 			case "authenticated":
-				accessToken := checkResp.AccessToken
-				refreshToken := checkResp.RefreshToken
-				if accessToken == "" || refreshToken == "" {
+				access := checkResp.AccessToken
+				refresh := checkResp.RefreshToken
+				if access == "" || refresh == "" {
 					return nil, nil, fmt.Errorf("токены отсутствуют в ответе")
 				}
 
 				// сохраняем токены в клиенте
-				c.SetTokens(accessToken, refreshToken)
+				c.tokenStore.SetTokens(access, refresh)
 
 				tokens := &TokenResponse{
-					AccessToken:  accessToken,
-					RefreshToken: refreshToken,
+					AccessToken:  access,
+					RefreshToken: refresh,
 				}
 				var profile *ProfileResponse
 				if checkResp.User != nil {
 					// берем профиль из ответа, если он есть
 					profile = checkResp.User
+					c.userID = checkResp.User.ID
 				} else {
 					// если профиль не пришел, запрашиваем отдельно
 					profile, err = c.GetProfile(ctx)

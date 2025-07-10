@@ -1,7 +1,7 @@
 package inventory
 
 const (
-	UserInventoryPath = "/user_inventory"
+	UserInventoryPath = "user_inventory"
 )
 
 // InventoryItem - элемент инвентаря

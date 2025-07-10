@@ -37,11 +37,6 @@ func NewClient(baseURL string, tokens *token.Storage) (*Client, error) {
 	}, nil
 }
 
-// SetAccessToken устанавливает токен доступа
-func (c *Client) SetAccessToken(token string) {
-	c.accessToken = token
-}
-
 // doRequest HTTP запрос с заданным методом, путем и телом и с учётом query-параметров
 func (c *Client) doRequest(
 	ctx context.Context,
@@ -73,9 +68,10 @@ func (c *Client) doRequest(
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	if token.AccessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+token.AccessToken)
-		req.Header.Set("Refresh-Token", token.RefreshToken)
+	access, refresh := c.tokenStore.GetToken()
+	if access != "" {
+		req.Header.Set("Authorization", access)
+		req.Header.Set("Refresh-Token", refresh)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -83,6 +79,13 @@ func (c *Client) doRequest(
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -258,8 +261,8 @@ func (c *Client) EditMember(ctx context.Context, tag string, userID, guildMember
 }
 
 // ExitGuild - выйти из гильдии (любой участник)
-func (c *Client) ExitGuild(ctx context.Context, tag string, userID int) error {
-	path := fmt.Sprintf(PathExitGuild, tag, userID)
+func (c *Client) ExitGuild(ctx context.Context, tag string) error {
+	path := fmt.Sprintf(PathExitGuild, tag)
 	_, err := c.doRequest(ctx, "DELETE", path, nil, nil)
 	return err
 }

@@ -54,7 +54,7 @@ func (m *ExitGuildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.loading = true
 			return m, func() tea.Msg {
 				ctx := context.Background()
-				err := m.Client.GuildsClient.ExitGuild(ctx, m.guildTag, m.id)
+				err := m.Client.GuildsClient.ExitGuild(ctx, m.guildTag)
 				if err != nil {
 					return err
 				}

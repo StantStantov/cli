@@ -66,8 +66,8 @@ func (m *EditGuildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, func() tea.Msg {
 				ctx := context.Background()
 				guild, err := m.Clients.GuildsClient.EditGuild(ctx, m.guildTag, m.id, guilds.EditGuildRequest{
-					Title:       m.originalName,
-					Description: m.originalDesc,
+					Title:       m.name,
+					Description: m.description,
 				})
 				if err != nil {
 					return err

@@ -35,11 +35,6 @@ func NewClient(baseURL string, tokens *token.Storage) (*Client, error) {
 	}, nil
 }
 
-// SetAccessToken устанавливает Access token для аутентификации
-func (c *Client) SetAccessToken(token string) {
-	c.accessToken = token
-}
-
 // doRequest выполняет HTTP запрос
 func (c *Client) doRequest(ctx context.Context, method, path string, body interface{}) ([]byte, error) {
 	reqURL := c.baseURL.ResolveReference(&url.URL{Path: path})
@@ -57,8 +52,10 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+	access, refresh := c.tokenStore.GetToken()
+	if access != "" {
+		req.Header.Set("Authorization", access)
+		req.Header.Set("Refresh-Token", refresh)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -66,6 +63,13 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
 
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)

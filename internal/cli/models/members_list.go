@@ -42,7 +42,6 @@ func NewMembersListModel(parent tea.Model, id int, username, userRole, guildTag,
 		guildTag:    guildTag,
 		guildName:   guildName,
 		currentPage: 1,
-		loading:     true,
 		Clients:     clients,
 	}
 }
@@ -328,6 +327,7 @@ func getRoleID(roleTitle string) int {
 }
 
 func (m *MembersListModel) loadMembers() tea.Msg {
+	m.loading = true
 	ctx := context.Background()
 	offset := (m.currentPage - 1) * membersPerPage
 	members, err := m.Clients.GuildsClient.GetGuildMembers(ctx, m.guildTag, offset, membersPerPage)

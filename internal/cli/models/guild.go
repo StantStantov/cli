@@ -115,6 +115,7 @@ func (m *GuildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case JoinRequestSentMsg:
 		m.isJoining = false
+		m.loading = false
 		m.successMsg = fmt.Sprintf("Запрос в гильдию [%s] отправлен", m.inputGuildTag)
 		m.inputGuildTag = ""
 		return m, nil
@@ -222,7 +223,8 @@ func (m *GuildModel) handleMenuSelection() (tea.Model, tea.Cmd) {
 
 	switch selectedItem {
 	case "Список гильдий":
-		return NewGuildListModel(m, m.id, m.username, m.Clients), nil
+		model := NewGuildListModel(m, m.id, m.username, m.Clients)
+		return model, model.Init()
 	case "Список участников":
 		return NewMembersListModel(m, m.id, m.username, m.Member.Role.Title, m.Guild.Tag, m.Guild.Title, m.Clients), nil
 	case "Чат гильдии":
@@ -264,7 +266,12 @@ func (m *GuildModel) handleJoinInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
+			if m.inputGuildTag == "" {
+				m.errorMsg = "Введите тег гильдия"
+				return m, nil
+			}
 			m.loading = true
+			m.errorMsg = ""
 			return m, func() tea.Msg {
 				ctx := context.Background()
 				err := m.Clients.GuildsClient.SendJoinRequest(ctx, m.inputGuildTag, m.id)
@@ -290,6 +297,18 @@ func (m *GuildModel) handleJoinInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errorMsg = ""
 			return m, nil
 		}
+
+	case error:
+		m.loading = false
+		m.errorMsg = fmt.Sprintf("Ошибка отправки запроса: %v", msg)
+		return m, nil
+
+	case JoinRequestSentMsg:
+		m.loading = false
+		m.isJoining = false
+		m.successMsg = fmt.Sprintf("Запрос в гильдию [%s] отправлен", m.inputGuildTag)
+		m.inputGuildTag = ""
+		return m, nil
 	}
 	return m, nil
 }

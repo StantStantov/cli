@@ -282,6 +282,7 @@ func (m *AuthModel) handleEnter() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	return NewOAuthModel(m, provider, m.Clients, deviceAuth.VerificationURL, deviceAuth.DeviceCode, deviceAuth.UserCode), nil
+	return NewOAuthModel(m, provider, m.Clients, deviceAuth.VerificationURL, deviceAuth.DeviceCode,
+		deviceAuth.UserCode, deviceAuth.Interval, deviceAuth.ExpiresIn), nil
 	//return NewOAuthModel(m, provider, m.Clients, "deviceAuth.VerificationURL", "ABCD-1234"), nil
 }

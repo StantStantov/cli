@@ -34,13 +34,13 @@ type WarRequestsModel struct {
 
 func NewWarRequestsModel(parent tea.Model, id int, username string, guildTag, guildName string, guildID int, clients *clientdeps.Client) *WarRequestsModel {
 	return &WarRequestsModel{
+		parent:      parent,
 		id:          id,
 		username:    username,
 		guildTag:    guildTag,
 		guildName:   guildName,
 		guildID:     guildID,
 		currentPage: 1,
-		loading:     true,
 		Clients:     clients,
 	}
 }
@@ -238,6 +238,7 @@ func (m *WarRequestsModel) renderActionView() string {
 }
 
 func (m *WarRequestsModel) loadWarRequests() tea.Msg {
+	m.loading = true
 	ctx := context.Background()
 	isInitiator := false
 	isTarget := true

@@ -13,13 +13,13 @@ import (
 )
 
 const (
-	basePath = "/"
+	basePath = ""
 )
 
 // Client - клиент для работы с Scoreboard
 type Client struct {
-	baseURL     *url.URL
-	httpClient  *http.Client
+	baseURL    *url.URL
+	httpClient *http.Client
 	tokenStore *token.Storage
 }
 
@@ -31,17 +31,12 @@ func NewClient(baseURL string, tokens *token.Storage) (*Client, error) {
 	}
 
 	return &Client{
-		baseURL:    parsedURL,
+		baseURL: parsedURL,
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
 		tokenStore: tokens,
 	}, nil
-}
-
-// SetAccessToken - установка токенов доступа для авторизации
-func (c *Client) SetAccessToken(token string) {
-	c.
 }
 
 // GetUserStats - получение статистики пользователей
@@ -182,8 +177,10 @@ func (c *Client) doRequest(ctx context.Context, url string) ([]byte, error) {
 
 	// установка токена в хедер
 	req.Header.Set("Accept", "application/json")
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+	access, refresh := c.tokenStore.GetToken()
+	if access != "" {
+		req.Header.Set("Authorization", access)
+		req.Header.Set("Refresh-Token", refresh)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -191,6 +188,13 @@ func (c *Client) doRequest(ctx context.Context, url string) ([]byte, error) {
 		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
