@@ -1,23 +1,27 @@
 package initCli
 
 import (
-	"github.com/charmbracelet/bubbletea"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"lesta-battleship/cli/internal/cli/models"
+	"lesta-start-battleship/cli/internal/cli/models"
+	"lesta-start-battleship/cli/internal/clientdeps"
+	guildStorage "lesta-start-battleship/cli/storage/guild"
 )
 
 type CLI struct {
 	currentScreen tea.Model
 	chatComponent *models.ChatComponent
-	authToken     string
-	userID        string
+	clients       *clientdeps.Client
+	gold          int
+	userID        int
 	username      string
 }
 
-func NewCLI() *CLI {
+func NewCLI(clients *clientdeps.Client) *CLI {
 	return &CLI{
-		currentScreen: models.NewAuthModel(),
+		currentScreen: models.NewAuthModel(clients),
 		chatComponent: models.NewChatComponent("", 0),
+		clients:       clients,
 	}
 }
 
@@ -38,26 +42,36 @@ func (a *CLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case models.AuthSuccessMsg:
-		a.authToken = msg.Token
+		a.userID = msg.ID
+		a.gold = msg.Gold
 		a.username = msg.Username
-		a.currentScreen = models.NewMainMenuModel(a.username)
+		a.currentScreen = models.NewMainMenuModel(a.userID, a.username, a.gold, a.clients)
 		a.chatComponent = models.NewChatComponent(a.username, 1)
 		return a, nil
 
 	case models.LogoutMsg:
-		a.authToken = ""
+		a.userID = 0
+		a.gold = 0
 		a.username = ""
-		a.currentScreen = models.NewAuthModel()
+		guildStorage.CleanStorage()
+		a.currentScreen = models.NewAuthModel(a.clients)
 		a.chatComponent.Close()
 		a.chatComponent = models.NewChatComponent("", 0)
 		return a, nil
 
 	case models.UsernameChangeMsg:
 		a.username = msg.NewUsername
+		a.gold = msg.Gold
 		a.chatComponent.Username = msg.NewUsername
 		return a, nil
 
 	case models.OpenChatMsg:
+		// Если GuildID передан, используем его для инициализации чата гильдии
+		guildID := 0
+		if msg.GuildID != 0 {
+			guildID = msg.GuildID
+		}
+		a.chatComponent = models.NewChatComponent(a.username, guildID)
 		a.chatComponent.Toggle()
 		if a.chatComponent.IsVisible() {
 			return a, a.chatComponent.Init()

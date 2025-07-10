@@ -2,13 +2,12 @@ package models
 
 import (
 	"fmt"
-	"lesta-battleship/cli/internal/api/websocket"
-	"lesta-battleship/cli/internal/api/websocket/packets"
-	"lesta-battleship/cli/internal/api/websocket/packets/guild"
-	"lesta-battleship/cli/internal/api/websocket/strategies"
-	"lesta-battleship/cli/internal/cli/handlers"
-	"lesta-battleship/cli/internal/cli/ui"
-	"log"
+	"lesta-start-battleship/cli/internal/api/websocket"
+	"lesta-start-battleship/cli/internal/api/websocket/packets"
+	"lesta-start-battleship/cli/internal/api/websocket/packets/guild"
+	"lesta-start-battleship/cli/internal/api/websocket/strategies"
+	"lesta-start-battleship/cli/internal/cli/handlers"
+	"lesta-start-battleship/cli/internal/cli/ui"
 	"strings"
 	"time"
 
@@ -35,17 +34,16 @@ type ChatComponent struct {
 }
 
 func NewChatComponent(username string, guildID int) *ChatComponent {
-	client, err := websocket.NewWebsocketClient(
+	/*client, err := websocket.NewWebsocketClient(
 		formatGuildChatUrl(1, 13), nil, strategies.GuildChatStrategy{})
 	if err != nil {
 		log.Println(err)
-	}
+	}*/
 
 	return &ChatComponent{
 		Username: username,
 		guildID:  guildID,
 		Width:    55,
-		wsClient: client,
 	}
 }
 

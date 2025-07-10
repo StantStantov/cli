@@ -3,10 +3,10 @@ package models
 import (
 	"crypto/rand"
 	"fmt"
-	"lesta-battleship/cli/internal/api/websocket"
-	"lesta-battleship/cli/internal/api/websocket/packets"
-	"lesta-battleship/cli/internal/api/websocket/strategies"
-	"lesta-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/api/websocket"
+	"lesta-start-battleship/cli/internal/api/websocket/packets"
+	"lesta-start-battleship/cli/internal/api/websocket/strategies"
+	"lesta-start-battleship/cli/internal/cli/ui"
 	"log"
 	"net/http"
 	"strings"
@@ -17,6 +17,7 @@ import (
 )
 
 type MatchmakingCustomMenuModel struct {
+	parent   tea.Model
 	userId   string
 	username string
 	selected int
@@ -24,7 +25,7 @@ type MatchmakingCustomMenuModel struct {
 	wsClient *websocket.WebsocketClient
 }
 
-func NewMatchmakingCustomMenuModel(username string) *MatchmakingCustomMenuModel {
+func NewMatchmakingCustomMenuModel(parent tea.Model, username string) *MatchmakingCustomMenuModel {
 	id := rand.Text()
 	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{"sub": id})
 	tokenString, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
@@ -43,6 +44,7 @@ func NewMatchmakingCustomMenuModel(username string) *MatchmakingCustomMenuModel 
 	go client.ReadPump()
 
 	return &MatchmakingCustomMenuModel{
+		parent:   parent,
 		userId:   id,
 		username: username,
 		selected: 0,
@@ -73,10 +75,10 @@ func (m *MatchmakingCustomMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				packet := matchmaking.NewCreateRoom(m.userId)
 				m.wsClient.SendPacket(packets.WrapMatchmaking(packet))
 
-				model := NewMatchmakingCustomRoomModel(m.username, m.userId, m.wsClient)
+				model := NewMatchmakingCustomRoomModel(m, m.username, m.userId, m.wsClient)
 				return model, model.Init()
 			case 1:
-				model := NewMatchmakingCustomJoinModel(m.username, m.userId, m.wsClient)
+				model := NewMatchmakingCustomJoinModel(m, m.username, m.userId, m.wsClient)
 				return model, model.Init()
 			}
 			return m, nil
@@ -85,7 +87,7 @@ func (m *MatchmakingCustomMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			packet := matchmaking.NewDisconnect(m.userId)
 
 			m.wsClient.SendPacket(packets.WrapMatchmaking(packet))
-			return NewMatchmakingModel(m.username), nil
+			return m.parent, nil
 
 		case tea.KeyCtrlC:
 			return m, tea.Quit

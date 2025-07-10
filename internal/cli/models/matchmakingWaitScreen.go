@@ -3,10 +3,10 @@ package models
 import (
 	"crypto/rand"
 	"fmt"
-	"lesta-battleship/cli/internal/api/websocket"
-	"lesta-battleship/cli/internal/api/websocket/packets"
-	"lesta-battleship/cli/internal/api/websocket/strategies"
-	"lesta-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/api/websocket"
+	"lesta-start-battleship/cli/internal/api/websocket/packets"
+	"lesta-start-battleship/cli/internal/api/websocket/strategies"
+	"lesta-start-battleship/cli/internal/cli/ui"
 	"log"
 	"net/http"
 	"strings"
@@ -20,6 +20,7 @@ import (
 type tickMsg time.Time
 
 type MatchmakingWaitScreenModel struct {
+	parent   tea.Model
 	userId   string
 	username string
 
@@ -30,7 +31,7 @@ type MatchmakingWaitScreenModel struct {
 	wsClient *websocket.WebsocketClient
 }
 
-func NewMatchmakingWaitScreenModel(username, matchType string) *MatchmakingWaitScreenModel {
+func NewMatchmakingWaitScreenModel(parent tea.Model, username, matchType string) *MatchmakingWaitScreenModel {
 	id := rand.Text()
 	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{"sub": id})
 	tokenString, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
@@ -52,6 +53,7 @@ func NewMatchmakingWaitScreenModel(username, matchType string) *MatchmakingWaitS
 	ticker := time.NewTicker(time.Second)
 
 	return &MatchmakingWaitScreenModel{
+		parent:   parent,
 		userId:   id,
 		username: username,
 
@@ -72,13 +74,13 @@ func (m *MatchmakingWaitScreenModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEsc:
-			return NewMatchmakingModel(m.username), nil
+			return m.parent, nil
 
 		case tea.KeyCtrlC:
 			return m, tea.Quit
 		}
 	case *matchmaking.PlayerMessage:
-		model := NewMatchmakingCustomRoomModel(m.username, m.userId, m.wsClient)
+		model := NewMatchmakingCustomRoomModel(m, m.username, m.userId, m.wsClient)
 		model.roomId = msg.Msg
 		return model, model.Init()
 	case tickMsg:

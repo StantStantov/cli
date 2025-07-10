@@ -2,7 +2,7 @@ package packets
 
 import (
 	"fmt"
-	"lesta-battleship/cli/internal/api/websocket/packets/guild"
+	"lesta-start-battleship/cli/internal/api/websocket/packets/guild"
 	"reflect"
 
 	matchmaking "github.com/lesta-battleship/matchmaking/pkg/packets"

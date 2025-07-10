@@ -2,8 +2,8 @@ package strategies
 
 import (
 	"fmt"
-	"lesta-battleship/cli/internal/api/websocket/packets"
-	"lesta-battleship/cli/internal/api/websocket/packets/guild"
+	"lesta-start-battleship/cli/internal/api/websocket/packets"
+	"lesta-start-battleship/cli/internal/api/websocket/packets/guild"
 
 	"github.com/gorilla/websocket"
 )

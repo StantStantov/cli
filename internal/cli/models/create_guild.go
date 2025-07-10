@@ -1,23 +1,35 @@
 package models
 
 import (
+	"context"
 	tea "github.com/charmbracelet/bubbletea"
-	"lesta-battleship/cli/internal/cli/handlers"
-	"lesta-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/api/guilds"
+	"lesta-start-battleship/cli/internal/cli/ui"
+	"lesta-start-battleship/cli/internal/clientdeps"
 	"strings"
 )
 
 type CreateGuildModel struct {
+	parent      tea.Model
+	id          int
 	username    string
+	gold        int
 	name        string
 	tag         string
-	activeField int
+	description string
+	activeField int // 0 - name, 1 - tag, 2 - description
+	loading     bool
 	errorMsg    string
+	Clients     *clientdeps.Client
 }
 
-func NewCreateGuildModel(username string) *CreateGuildModel {
+func NewCreateGuildModel(parent tea.Model, id int, username string, gold int, clients *clientdeps.Client) *CreateGuildModel {
 	return &CreateGuildModel{
+		parent:   parent,
+		id:       id,
 		username: username,
+		gold:     gold,
+		Clients:  clients,
 	}
 }
 
@@ -30,40 +42,94 @@ func (m *CreateGuildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
-			if m.activeField == 1 {
-				//Заглушка для создания гильдии
-				return NewGuildModel(m.username, handlers.GuildResponse{
-					Member: true,
-					Owner:  true,
-					Info: handlers.GuildInfo{
-						Id:   1,
-						Name: m.name,
-						Tag:  m.tag,
-					},
-				}), nil
+			if m.activeField < 2 {
+				m.activeField++
+				return m, nil
 			}
-			m.activeField = (m.activeField + 1) % 2
+
+			if len(m.name) < 3 {
+				m.errorMsg = "Название гильдии должно быть не менее 3 символов."
+				return m, nil
+			}
+			if len(m.tag) < 2 || len(m.tag) > 5 {
+				m.errorMsg = "Тег гильдии должен быть от 2 до 5 символов."
+				return m, nil
+			}
+
+			m.loading = true
+			return m, func() tea.Msg {
+				ctx := context.Background()
+				guild, err := m.Clients.GuildsClient.CreateGuild(ctx, m.id, guilds.CreateGuildRequest{
+					Title:       m.name,
+					Tag:         m.tag,
+					Description: m.description,
+				})
+				if err != nil {
+					return err
+				}
+				return GuildCreatedMsg{Guild: guild}
+			}
+
+		case tea.KeyTab:
+			m.activeField = (m.activeField + 1) % 3
 			return m, nil
 
 		case tea.KeyBackspace:
-			if m.activeField == 0 && len(m.name) > 0 {
-				m.name = m.name[:len(m.name)-1]
-			} else if m.activeField == 1 && len(m.tag) > 0 {
-				m.tag = m.tag[:len(m.tag)-1]
+			switch m.activeField {
+			case 0:
+				if len(m.name) > 0 {
+					m.name = m.name[:len(m.name)-1]
+				}
+			case 1:
+				if len(m.tag) > 0 {
+					m.tag = m.tag[:len(m.tag)-1]
+				}
+			case 2:
+				if len(m.description) > 0 {
+					m.description = m.description[:len(m.description)-1]
+				}
 			}
 			return m, nil
 
 		case tea.KeyRunes:
-			if m.activeField == 0 {
+			switch m.activeField {
+			case 0:
 				m.name += string(msg.Runes)
-			} else {
+			case 1:
 				m.tag += string(msg.Runes)
+			case 2:
+				m.description += string(msg.Runes)
+			}
+			return m, nil
+
+		case tea.KeySpace:
+			switch m.activeField {
+			case 0:
+				m.name += " "
+			case 1:
+				m.tag += ""
+			case 2:
+				m.description += ""
 			}
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewGuildModel(m.username, handlers.GuildResponse{}), nil
+			return m.parent, nil
 		}
+
+	case GuildCreatedMsg:
+		ctx := context.Background()
+		member, err := m.Clients.GuildsClient.GetMemberByUserID(ctx, m.id)
+		if err != nil {
+			m.errorMsg = err.Error()
+			return m, nil
+		}
+		return NewGuildModel(m.id, m.username, m.gold, member, msg.Guild, m.Clients), nil
+
+	case error:
+		m.loading = false
+		m.errorMsg = msg.Error()
+		return m, nil
 	}
 	return m, nil
 }
@@ -73,6 +139,16 @@ func (m *CreateGuildModel) View() string {
 
 	sb.WriteString(ui.TitleStyle.Render("Создание гильдии"))
 	sb.WriteString("\n\n")
+
+	if m.loading {
+		sb.WriteString("Cоздание гильдии...")
+		return sb.String()
+	}
+
+	if m.errorMsg != "" {
+		sb.WriteString(ui.ErrorStyle.Render(m.errorMsg))
+		sb.WriteString("\n\n")
+	}
 
 	sb.WriteString("Название гильдии:\n")
 	if m.activeField == 0 {
@@ -88,14 +164,17 @@ func (m *CreateGuildModel) View() string {
 	} else {
 		sb.WriteString(" " + m.tag)
 	}
+	sb.WriteString("\n\n")
 
-	if m.errorMsg != "" {
-		sb.WriteString("\n\n")
-		sb.WriteString(ui.ErrorStyle.Render(m.errorMsg))
+	sb.WriteString("Описание гильдии (необязательно):\n")
+	if m.activeField == 2 {
+		sb.WriteString(ui.SelectedStyle.Render("> " + m.description + "_"))
+	} else {
+		sb.WriteString(" " + m.description)
 	}
 
 	sb.WriteString("\n\n")
-	sb.WriteString(ui.NormalStyle.Render("Enter - подтвердить, Esc - назад"))
+	sb.WriteString(ui.HelpStyle.Render("Enter - подтвердить, Tab - переключение полей, Esc - назад"))
 
 	return sb.String()
 }

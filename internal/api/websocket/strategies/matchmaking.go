@@ -2,7 +2,7 @@ package strategies
 
 import (
 	"fmt"
-	"lesta-battleship/cli/internal/api/websocket/packets"
+	"lesta-start-battleship/cli/internal/api/websocket/packets"
 
 	"github.com/gorilla/websocket"
 	matchmaking "github.com/lesta-battleship/matchmaking/pkg/packets"
