@@ -48,23 +48,28 @@ func (m *AuthModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case tea.KeyTab:
 			m.errorMsg = ""
+			m.authMethod = 0
 			m.activeTab = (m.activeTab + 1) % 2
 			m.activeField = 0
 			return m, nil
 
 		case tea.KeyLeft:
 			m.errorMsg = ""
-			m.authMethod = 0
+			//m.authMethod = 0
 			if m.activeTab == 0 {
-				m.authMethod = (m.authMethod - 1 + 3) % 3
+				if m.authMethod > 0 {
+					m.authMethod--
+				}
 			}
 			return m, nil
 
 		case tea.KeyRight:
 			m.errorMsg = ""
-			m.authMethod = 0
+			//m.authMethod = 0
 			if m.activeTab == 0 {
-				m.authMethod = (m.authMethod + 1) % 3
+				if m.authMethod < 2 {
+					m.authMethod++
+				}
 			}
 			return m, nil
 

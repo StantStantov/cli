@@ -49,7 +49,7 @@ func (c *Client) GetUserStats(
 	limit int,
 	page int,
 ) (*UserListResponse, error) {
-	endpoint := fmt.Sprintf("%s%s/users", c.baseURL.String(), basePath)
+	endpoint := fmt.Sprintf("%s/users", c.baseURL.String())
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка формирования URL: %w", err)
@@ -130,7 +130,7 @@ func (c *Client) GetGuildStats(
 	limit int,
 	page int,
 ) (*GuildListResponse, error) {
-	endpoint := fmt.Sprintf("%s%s/guilds", c.baseURL.String(), basePath)
+	endpoint := fmt.Sprintf("%s/guilds", c.baseURL.String())
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка формирования URL: %w", err)
