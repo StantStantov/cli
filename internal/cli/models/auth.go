@@ -8,6 +8,7 @@ import (
 	authapi "lesta-start-battleship/cli/internal/api/auth"
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"lesta-start-battleship/cli/internal/clientdeps"
+	"log"
 	"strings"
 )
 
@@ -268,6 +269,12 @@ func (m *AuthModel) handleEnter() (tea.Model, tea.Cmd) {
 				m.errorMsg = fmt.Sprintf("%v", err)
 				return m, nil
 			}
+
+			if profile == nil {
+				log.Printf("Профайл пустой")
+				return m, nil
+			}
+
 			return m, func() tea.Msg {
 				return AuthSuccessMsg{
 					ID:       profile.ID,

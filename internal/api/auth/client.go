@@ -192,7 +192,7 @@ func (c *Client) RefreshToken(ctx context.Context) (*TokenResponse, error) {
 
 // GetProfile - получение профиля текущего пользователя
 func (c *Client) GetProfile(ctx context.Context) (*ProfileResponse, error) {
-	path := fmt.Sprintf(GetProfilePath)
+	path := fmt.Sprint(GetProfilePath)
 	if c.userID == 0 {
 		return nil, fmt.Errorf("user id not set")
 	}
