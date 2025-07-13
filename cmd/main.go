@@ -22,6 +22,7 @@ func main() {
 	}
 
 	fmt.Println("CLI клиент запущен.")
+	log.Print("CLI клиент запущен.")
 	if err := app.Run(); err != nil {
 		log.Printf("Ошибка выполнения: %v", err)
 		os.Exit(1)

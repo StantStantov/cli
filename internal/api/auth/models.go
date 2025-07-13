@@ -7,7 +7,7 @@ const (
 	GoogleCheckPath  = "auth/google/device/check"
 	YandexInitPath   = "auth/yandex/device/init"
 	YandexCheckPath  = "auth/yandex/device/check"
-	GetProfilePath   = "users/%d"
+	GetProfilePath   = "users"
 	RefreshTokenPath = "auth/refresh_token/"
 	UpdateUserPath   = "users/%d"
 	DeleteUserPath   = "users/%d"

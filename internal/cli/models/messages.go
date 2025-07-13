@@ -73,3 +73,5 @@ type DeclareWarMsg struct {
 type WarRequestProcessedMsg struct {
 	Message string
 }
+
+type EmptyCurrentUserStats struct{}
