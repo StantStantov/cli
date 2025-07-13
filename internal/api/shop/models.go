@@ -1,7 +1,5 @@
 package shop
 
-import "time"
-
 // Product - игровой предмет для покупки
 type Product struct {
 	ID          int               `json:"item_id"`
@@ -36,9 +34,9 @@ type Chest struct {
 type Promotion struct {
 	ID        int                `json:"id"`
 	Name      string             `json:"name"`
-	StartDate time.Time          `json:"start_date"`
-	EndDate   time.Time          `json:"end_date"`
-	Duration  time.Duration      `json:"duration"`
+	StartDate string             `json:"start_date"`
+	EndDate   string             `json:"end_date"`
+	Duration  string             `json:"duration"`
 	IsActive  string             `json:"is_active"`
 	Chests    []Chest            `json:"chests"`
 	Product   []ProductPromotion `json:"product"`
@@ -46,13 +44,13 @@ type Promotion struct {
 
 // Purchase - информация о покупке
 type Purchase struct {
-	ID          int       `json:"id"`
-	UserID      int       `json:"owner"`
-	Quantity    int       `json:"quantity"`
-	Date        time.Time `json:"date"`
-	ItemID      *int      `json:"item"`
-	ChestID     *int      `json:"chest"`
-	PromotionID *int      `json:"promotion"`
+	ID          int    `json:"id"`
+	UserID      int    `json:"owner"`
+	Quantity    int    `json:"quantity"`
+	Date        string `json:"date"`
+	ItemID      *int   `json:"item"`
+	ChestID     *int   `json:"chest"`
+	PromotionID *int   `json:"promotion"`
 }
 
 // OpenChestRequest - запрос на открытие сундука
