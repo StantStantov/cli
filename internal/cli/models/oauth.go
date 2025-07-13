@@ -9,17 +9,14 @@ import (
 	"strings"
 )
 
-const (
-	expiresInSeconds = 600
-	intervalSeconds  = 5
-)
-
 type OAuthModel struct {
 	parent     tea.Model
 	provider   string // "google" или "yandex"
 	oauthURI   string
 	deviceCode string // код устройства
 	userCode   string
+	interval   int    // интервал опроса в секундах
+	expiresIn  int    // время опроса в секундах
 	status     string // "waiting", "success", "error"
 	id         int
 	username   string
@@ -28,7 +25,8 @@ type OAuthModel struct {
 	Clients    *clientdeps.Client
 }
 
-func NewOAuthModel(parent tea.Model, provider string, client *clientdeps.Client, oauthURL, deviceCode, userCode string) *OAuthModel {
+func NewOAuthModel(parent tea.Model, provider string, client *clientdeps.Client, oauthURL, deviceCode,
+	userCode string, interval, expiresIn int) *OAuthModel {
 	return &OAuthModel{
 		parent:     parent,
 		provider:   provider,
@@ -36,6 +34,8 @@ func NewOAuthModel(parent tea.Model, provider string, client *clientdeps.Client,
 		oauthURI:   oauthURL,
 		deviceCode: deviceCode,
 		userCode:   userCode,
+		interval:   interval,
+		expiresIn:  expiresIn,
 		Clients:    client,
 	}
 }
@@ -116,7 +116,7 @@ func (m *OAuthModel) View() string {
 func (m *OAuthModel) pollingOAuth() tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		_, profile, err := m.Clients.AuthClient.CompleteOAuthPolling(ctx, m.provider, m.deviceCode, expiresInSeconds, intervalSeconds)
+		_, profile, err := m.Clients.AuthClient.CompleteOAuthPolling(ctx, m.provider, m.deviceCode, m.expiresIn, m.interval)
 		if err != nil {
 			return OAuthPollingResultMsg{Error: err.Error()}
 		}

@@ -50,17 +50,19 @@ func (m *MainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			switch m.selected {
 			case 0: // Бой
-				return NewMatchmakingModel(m.username), nil
+				return NewMatchmakingModel(m, m.id, m.username), nil
 			case 1: // Инвентарь
 				return m, m.loadHandler
 			case 2: // Магазин
-				return NewShopModel(m, m.id, m.username, m.gold, ShopResponse{}, m.Clients), nil
+				model := NewShopModel(m.id, m.username, m.gold, m.Clients)
+				return model, model.Init()
 			case 3: // Гильдия
 				return m, m.guildHandler
 			case 4: // Редактирование профиля
 				return NewEditProfileModel(m.id, m.username, m.gold, m.Clients), nil
 			case 5: // Рейтинг
-				return NewScoreboardModel(m, m.id, m.username, m.gold, m.Clients), nil
+				model := NewScoreboardModel(m, m.id, m.username, m.gold, m.Clients)
+				return model, model.Init()
 			}
 			return m, nil
 

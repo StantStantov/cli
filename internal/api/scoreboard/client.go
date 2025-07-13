@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"lesta-start-battleship/cli/internal/api/token"
+	"lesta-start-battleship/cli/storage/token"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -13,22 +14,21 @@ import (
 )
 
 const (
-	basePath = "/"
+	basePath = ""
 )
 
 // Client - клиент для работы с Scoreboard
 type Client struct {
-	baseURL      *url.URL
-	httpClient   *http.Client
-	accessToken  string
-	refreshToken string
+	baseURL    *url.URL
+	httpClient *http.Client
+	tokenStore *token.Storage
 }
 
 // NewClient - создание нового клиента
-func NewClient(baseURL string) (*Client, error) {
+func NewClient(baseURL string, tokens *token.Storage) (*Client, error) {
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
-		return nil, fmt.Errorf("некорректный базовый URL: %w", err)
+		return nil, fmt.Errorf("invalid base URL: %w", err)
 	}
 
 	return &Client{
@@ -36,13 +36,8 @@ func NewClient(baseURL string) (*Client, error) {
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
+		tokenStore: tokens,
 	}, nil
-}
-
-// SetAccessToken - установка токенов доступа для авторизации
-func (c *Client) SetAccessToken(accessToken, refreshToken string) {
-	c.accessToken = token.AccessToken
-	c.refreshToken = token.RefreshToken
 }
 
 // GetUserStats - получение статистики пользователей
@@ -55,7 +50,7 @@ func (c *Client) GetUserStats(
 	limit int,
 	page int,
 ) (*UserListResponse, error) {
-	endpoint := fmt.Sprintf("%s%s/users", c.baseURL, basePath)
+	endpoint := fmt.Sprintf("%susers/", c.baseURL.String())
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка формирования URL: %w", err)
@@ -64,21 +59,20 @@ func (c *Client) GetUserStats(
 	// Подготовка параметров запроса
 	q := u.Query()
 	if userID != nil {
-		q.Add("id_like", strconv.Itoa(*userID))
+		q.Add("ids", strconv.Itoa(*userID))
 	}
 	if nameFilter != "" {
 		q.Add("name_ilike", nameFilter)
 	}
-	if orderBy != "" {
-		q.Add("order_by", orderBy)
-	}
 	if reverse {
-		q.Add("reverse", "true")
+		q.Add(fmt.Sprintf("order_by_%s", orderBy), "desc")
 	}
 	q.Add("limit", strconv.Itoa(limit))
 	q.Add("page", strconv.Itoa(page))
 
 	u.RawQuery = q.Encode()
+
+	log.Printf("URL запроса рейтинга игроков: %s", u.String())
 
 	body, err := c.doRequest(ctx, u.String())
 	if err != nil {
@@ -94,36 +88,17 @@ func (c *Client) GetUserStats(
 }
 
 // GetCurrentUserStats - получение статистики текущего пользователя
-func (c *Client) GetCurrentUserStats(ctx context.Context, userID int) (*UserStat, error) {
-	resp, err := c.GetUserStats(ctx, &userID, "", "", false, 1, 1)
+func (c *Client) GetCurrentUserStats(ctx context.Context, username string) (*UserStat, error) {
+	resp, err := c.GetUserStats(ctx, nil, username, "", false, 1, 1)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(resp.Items) == 0 {
-		return nil, fmt.Errorf("статистика пользователя с id %d не найдена", userID)
+		return nil, nil
 	}
 
 	return &resp.Items[0], nil
-}
-
-// GetChestLeaders - получение лидеров по открытию сундуков
-func (c *Client) GetChestLeaders(ctx context.Context, limit int) ([]UserStat, error) {
-	resp, err := c.GetUserStats(
-		ctx,
-		nil,
-		"",             // без фильтра по имени
-		"chest_opened", // сортировка по сундукам
-		true,           // по убыванию (от большего к меньшему)
-		limit,          // запрошенное количество
-		1,              // страница
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return resp.Items, nil
 }
 
 // GetGuildStats - получение статистики гильдий
@@ -136,7 +111,7 @@ func (c *Client) GetGuildStats(
 	limit int,
 	page int,
 ) (*GuildListResponse, error) {
-	endpoint := fmt.Sprintf("%s%s/guilds", c.baseURL, basePath)
+	endpoint := fmt.Sprintf("%sguilds/", c.baseURL.String())
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка формирования URL: %w", err)
@@ -144,21 +119,20 @@ func (c *Client) GetGuildStats(
 
 	q := u.Query()
 	if guildID != nil {
-		q.Add("id_like", strconv.Itoa(*guildID))
+		q.Add("ids", strconv.Itoa(*guildID))
 	}
 	if nameFilter != "" {
-		q.Add("name_ilike", nameFilter)
-	}
-	if orderBy != "" {
-		q.Add("order_by", orderBy)
+		q.Add("tag_ilike", nameFilter)
 	}
 	if reverse {
-		q.Add("reverse", "true")
+		q.Add(fmt.Sprintf("order_by_%s", orderBy), "desc")
 	}
 	q.Add("limit", strconv.Itoa(limit))
 	q.Add("page", strconv.Itoa(page))
 
 	u.RawQuery = q.Encode()
+
+	log.Printf("URL запроса рейтинга гильдий: %s", u.String())
 
 	body, err := c.doRequest(ctx, u.String())
 	if err != nil {
@@ -183,9 +157,10 @@ func (c *Client) doRequest(ctx context.Context, url string) ([]byte, error) {
 
 	// установка токена в хедер
 	req.Header.Set("Accept", "application/json")
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", c.accessToken)
-		req.Header.Set("Refresh-Token", c.refreshToken)
+	access, refresh := c.tokenStore.GetToken()
+	if access != "" {
+		req.Header.Set("Authorization", access)
+		req.Header.Set("Refresh-Token", refresh)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -193,8 +168,13 @@ func (c *Client) doRequest(ctx context.Context, url string) ([]byte, error) {
 		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
 	}
 	defer resp.Body.Close()
-	token.AccessToken = resp.Header.Get("Authorization")
-	token.RefreshToken = resp.Header.Get("Refresh-Token")
+
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

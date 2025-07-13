@@ -226,6 +226,7 @@ func (m *JoinRequestsModel) renderConfirmView() string {
 }
 
 func (m *JoinRequestsModel) loadRequests() tea.Msg {
+	m.loading = true
 	ctx := context.Background()
 	requests, err := m.Clients.GuildsClient.GetJoinRequests(ctx, m.guildTag, m.id)
 	if err != nil {

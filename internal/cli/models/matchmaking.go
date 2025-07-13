@@ -15,13 +15,16 @@ func formatMatchmakingUrl(matchType string) string {
 }
 
 type MatchmakingModel struct {
+	parent   tea.Model
+	id       int
 	username string
-
 	selected int
 }
 
-func NewMatchmakingModel(username string) *MatchmakingModel {
+func NewMatchmakingModel(parent tea.Model, id int, username string) *MatchmakingModel {
 	return &MatchmakingModel{
+		parent:   parent,
+		id:       id,
 		username: username,
 	}
 }
@@ -47,21 +50,21 @@ func (m *MatchmakingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			switch m.selected {
 			case 0:
-				model := NewMatchmakingWaitScreenModel(m.username, "random")
+				model := NewMatchmakingWaitScreenModel(m, m.username, "random")
 				return model, model.Init()
 			case 1:
-				model := NewMatchmakingWaitScreenModel(m.username, "ranked")
+				model := NewMatchmakingWaitScreenModel(m, m.username, "ranked")
 				return model, model.Init()
 			case 2:
 				return m, nil
 			case 3:
-				model := NewMatchmakingCustomMenuModel(m.username)
+				model := NewMatchmakingCustomMenuModel(m, m.username)
 				return model, model.Init()
 			}
 			return m, nil
 
 		case tea.KeyEsc:
-			return NewMainMenuModel(0, m.username, 0, nil), nil
+			return m.parent, nil
 
 		case tea.KeyCtrlC:
 			return m, tea.Quit
@@ -96,7 +99,7 @@ func (m *MatchmakingModel) View() string {
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(ui.NormalStyle.Render("↑/↓ - выбор, Enter - подтвердить, Esc - выход"))
+	sb.WriteString(ui.HelpStyle.Render("↑/↓ - выбор, Enter - подтвердить, Esc - выход"))
 
 	return sb.String()
 }

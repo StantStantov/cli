@@ -13,6 +13,7 @@ import (
 )
 
 type MatchmakingCustomRoomModel struct {
+	parent   tea.Model
 	userId   string
 	username string
 
@@ -20,8 +21,9 @@ type MatchmakingCustomRoomModel struct {
 	roomId   string
 }
 
-func NewMatchmakingCustomRoomModel(username, userId string, client *websocket.WebsocketClient) *MatchmakingCustomRoomModel {
+func NewMatchmakingCustomRoomModel(parent tea.Model, username, userId string, client *websocket.WebsocketClient) *MatchmakingCustomRoomModel {
 	return &MatchmakingCustomRoomModel{
+		parent:   parent,
 		userId:   userId,
 		username: username,
 
@@ -42,7 +44,7 @@ func (m *MatchmakingCustomRoomModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			packet := matchmaking.NewDisconnect(m.userId)
 
 			m.wsClient.SendPacket(packets.WrapMatchmaking(packet))
-			return NewMatchmakingCustomMenuModel(m.username), nil
+			return m.parent, nil
 
 		case tea.KeyCtrlC:
 			return m, tea.Quit

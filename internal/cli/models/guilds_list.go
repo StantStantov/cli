@@ -8,6 +8,7 @@ import (
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"lesta-start-battleship/cli/internal/clientdeps"
 	guildStorage "lesta-start-battleship/cli/storage/guild"
+	"log"
 	"strings"
 )
 
@@ -31,7 +32,6 @@ func NewGuildListModel(parent tea.Model, id int, username string, clients *clien
 		id:          id,
 		username:    username,
 		currentPage: 1,
-		loading:     true,
 		Clients:     clients,
 	}
 }
@@ -93,7 +93,7 @@ func (m *GuildListModel) View() string {
 	sb.WriteString("\n\n")
 
 	if m.loading {
-		sb.WriteString(ui.NormalStyle.Render("Загрузка списка гильдий..."))
+		sb.WriteString(ui.NormalStyle.Render("Загрузка списка гильдий...\n"))
 	}
 
 	if m.errorMsg != "" {
@@ -123,9 +123,11 @@ func (m *GuildListModel) View() string {
 }
 
 func (m *GuildListModel) loadGuilds() tea.Msg {
+	m.loading = true
 	ctx := context.Background()
 	offset := (m.currentPage - 1) * guildPerPage
 	guildsList, err := m.Clients.GuildsClient.GetGuilds(ctx, offset, guildPerPage)
+	log.Printf("Количество гильдий: %d", len(guildsList.Items))
 	if err != nil {
 		return err
 	}

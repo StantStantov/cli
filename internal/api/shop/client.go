@@ -5,8 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"lesta-start-battleship/cli/internal/api/token"
+	"lesta-start-battleship/cli/storage/token"
 	"net/http"
 	"net/url"
 	"time"
@@ -14,95 +13,75 @@ import (
 
 // Client - клиент для работы с Shop
 type Client struct {
-	baseURL      *url.URL
-	httpClient   *http.Client
-	accessToken  string
-	refreshToken string
+	baseURL    *url.URL
+	httpClient *http.Client
+	tokenStore *token.Storage
 }
 
 // NewClient - создание нового клиента
-func NewClient(baseURL string) (*Client, error) {
+func NewClient(baseURL string, tokens *token.Storage) (*Client, error) {
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
-		return nil, fmt.Errorf("некорректный базовый URL: %w", err)
+		return nil, fmt.Errorf("invalid base URL: %w", err)
 	}
+
 	return &Client{
 		baseURL:    parsedURL,
 		httpClient: &http.Client{Timeout: 15 * time.Second},
+		tokenStore: tokens,
 	}, nil
 }
 
-// SetAccessToken - установка токенов доступа для авторизации
-func (c *Client) SetAccessToken(accessToken, refreshToken string) {
-	c.accessToken = accessToken
-	c.refreshToken = refreshToken
-}
+// doRequest - шаблон для создания запросов
+func (c *Client) doRequest(ctx context.Context, method, path string, body interface{}) (*http.Response, error) {
+	reqURL := c.baseURL.ResolveReference(&url.URL{Path: path})
 
-// doRequest - универсальный метод для выполнения запросов с обработкой тела
-func (c *Client) doRequest(
-	ctx context.Context,
-	method, path string,
-	body interface{},
-) ([]byte, error) {
-	// Формируем полный URL
-	fullURL := c.baseURL.ResolveReference(&url.URL{Path: path}).String()
-
-	// Подготавливаем тело запроса
-	var bodyReader io.Reader
+	var buf bytes.Buffer
 	if body != nil {
-		jsonBody, err := json.Marshal(body)
-		if err != nil {
-			return nil, fmt.Errorf("ошибка кодирования тела запроса: %w", err)
+		if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			return nil, fmt.Errorf("error encoding body: %w", err)
 		}
-		bodyReader = bytes.NewBuffer(jsonBody)
 	}
 
-	// Создаем HTTP-запрос
-	req, err := http.NewRequestWithContext(ctx, method, fullURL, bodyReader)
+	req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), &buf)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка создания запроса: %w", err)
+		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
 	// Устанавливаем заголовки
 	req.Header.Set("Content-Type", "application/json")
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
-		req.Header.Set("Refresh-Token", c.refreshToken)
+	access, refresh := c.tokenStore.GetToken()
+	if access != "" {
+		req.Header.Set("Authorization", access)
+		req.Header.Set("Refresh-Token", refresh)
 	}
 
-	// Выполняем запрос
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
-	}
-	defer resp.Body.Close()
-	token.AccessToken = resp.Header.Get("Authorization")
-	token.RefreshToken = resp.Header.Get("Refresh-Token")
-
-	// Читаем тело ответа
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка чтения ответа: %w", err)
-	}
-
-	// Обрабатываем HTTP-ошибки
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(responseBody))
-	}
-
-	return responseBody, nil
+	return c.httpClient.Do(req)
 }
 
 // GetProducts - получение списка предметов
 func (c *Client) GetProducts(ctx context.Context) ([]Product, error) {
-	body, err := c.doRequest(ctx, "GET", "/item/", nil)
+	resp, err := c.doRequest(ctx, "GET", "item/", nil)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка получения продуктов: %w", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	_, refresh := c.tokenStore.GetToken()
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}
 
 	var products []Product
-	if err := json.Unmarshal(body, &products); err != nil {
-		return nil, fmt.Errorf("ошибка декодирования продуктов: %w", err)
+	if err := json.NewDecoder(resp.Body).Decode(&products); err != nil {
+		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
 
 	return products, nil
@@ -110,14 +89,27 @@ func (c *Client) GetProducts(ctx context.Context) ([]Product, error) {
 
 // GetChests - получение списка сундуков
 func (c *Client) GetChests(ctx context.Context) ([]Chest, error) {
-	body, err := c.doRequest(ctx, "GET", "/chest/chest/", nil)
+	resp, err := c.doRequest(ctx, "GET", "chest/", nil)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка получения сундуков: %w", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	_, refresh := c.tokenStore.GetToken()
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}
 
 	var chests []Chest
-	if err := json.Unmarshal(body, &chests); err != nil {
-		return nil, fmt.Errorf("ошибка декодирования сундуков: %w", err)
+	if err := json.NewDecoder(resp.Body).Decode(&chests); err != nil {
+		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
 
 	return chests, nil
@@ -125,14 +117,27 @@ func (c *Client) GetChests(ctx context.Context) ([]Chest, error) {
 
 // GetPromotions - получение списка акций
 func (c *Client) GetPromotions(ctx context.Context) ([]Promotion, error) {
-	body, err := c.doRequest(ctx, "GET", "/promotion/", nil)
+	resp, err := c.doRequest(ctx, "GET", "promotion/", nil)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка получения акций: %w", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	_, refresh := c.tokenStore.GetToken()
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}
 
 	var promotions []Promotion
-	if err := json.Unmarshal(body, &promotions); err != nil {
-		return nil, fmt.Errorf("ошибка декодирования акций: %w", err)
+	if err := json.NewDecoder(resp.Body).Decode(&promotions); err != nil {
+		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
 
 	return promotions, nil
@@ -140,16 +145,50 @@ func (c *Client) GetPromotions(ctx context.Context) ([]Promotion, error) {
 
 // BuyProduct - покупка предмета
 func (c *Client) BuyProduct(ctx context.Context, itemID int) error {
-	path := fmt.Sprintf("/item/%d/buy/", itemID)
-	_, err := c.doRequest(ctx, "POST", path, nil)
-	return err
+	path := fmt.Sprintf("item/%d/buy/", itemID)
+	resp, err := c.doRequest(ctx, "POST", path, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	_, refresh := c.tokenStore.GetToken()
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
+
+	if resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 // BuyChest - покупка сундука
 func (c *Client) BuyChest(ctx context.Context, chestID int) error {
-	path := fmt.Sprintf("/chest/chest/%d/buy/", chestID)
-	_, err := c.doRequest(ctx, "POST", path, nil)
-	return err
+	path := fmt.Sprintf("chest/%d/buy/", chestID)
+	resp, err := c.doRequest(ctx, "POST", path, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	_, refresh := c.tokenStore.GetToken()
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
+
+	if resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 // OpenChest - открытие сундука
@@ -159,8 +198,25 @@ func (c *Client) OpenChest(ctx context.Context, chestID, amount int) error {
 		Amount:  amount,
 	}
 
-	_, err := c.doRequest(ctx, "POST", "/chest/chest/open/", requestBody)
-	return err
+	resp, err := c.doRequest(ctx, "POST", "chest/open/", requestBody)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	_, refresh := c.tokenStore.GetToken()
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
+
+	if resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 // TODO:

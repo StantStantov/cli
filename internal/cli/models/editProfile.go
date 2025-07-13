@@ -50,9 +50,9 @@ func (m *EditProfileModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case tea.KeyEnter:
 				ctx := context.Background()
-				err := m.Clients.AuthClient.DeleteUser(ctx)
+				err := m.Clients.AuthClient.DeleteUser(ctx, m.id)
 				if err != nil {
-					m.errorMsg = "Ошибка удаления: " + err.Error()
+					m.errorMsg = err.Error()
 					m.confirmDelete = false
 					m.activeField = 0
 					return m, nil
@@ -93,7 +93,7 @@ func (m *EditProfileModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.errorMsg = "Ник должен быть не менее 3 символов"
 				} else {
 					ctx := context.Background()
-					profile, err := m.Clients.AuthClient.UpdateUser(ctx, auth.UpdateUserRequest{Username: m.tempNick})
+					profile, err := m.Clients.AuthClient.UpdateUser(ctx, m.id, auth.UpdateUserRequest{Username: m.tempNick})
 					if err != nil {
 						m.errorMsg = err.Error()
 						return m, nil
@@ -112,7 +112,7 @@ func (m *EditProfileModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.errorMsg = "Пароль должен быть не менее 6 символов"
 				} else {
 					ctx := context.Background()
-					profile, err := m.Clients.AuthClient.UpdateUser(ctx, auth.UpdateUserRequest{Password: m.tempPass})
+					profile, err := m.Clients.AuthClient.UpdateUser(ctx, m.id, auth.UpdateUserRequest{Password: m.tempPass})
 					if err != nil {
 						m.errorMsg = err.Error()
 						return m, nil

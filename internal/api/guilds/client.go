@@ -11,19 +11,18 @@ import (
 	"strconv"
 	"time"
 
-	"lesta-start-battleship/cli/internal/api/token"
+	"lesta-start-battleship/cli/storage/token"
 )
 
 // Client - клиент для работы с API гильдий
 type Client struct {
-	baseURL      *url.URL
-	httpClient   *http.Client
-	accessToken  string
-	refreshToken string
+	baseURL    *url.URL
+	httpClient *http.Client
+	tokenStore *token.Storage
 }
 
 // NewClient создает новый клиент
-func NewClient(baseURL string) (*Client, error) {
+func NewClient(baseURL string, tokens *token.Storage) (*Client, error) {
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid base URL: %w", err)
@@ -34,13 +33,8 @@ func NewClient(baseURL string) (*Client, error) {
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
+		tokenStore: tokens,
 	}, nil
-}
-
-// SetAccessToken устанавливает токен доступа
-func (c *Client) SetAccessToken(accessToken, refreshToken string) {
-	token.AccessToken = accessToken
-	token.RefreshToken = refreshToken
 }
 
 // doRequest HTTP запрос с заданным методом, путем и телом и с учётом query-параметров
@@ -74,9 +68,10 @@ func (c *Client) doRequest(
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	if token.AccessToken != "" {
-		req.Header.Set("Authorization", token.AccessToken)
-		req.Header.Set("Refresh-Token", token.RefreshToken)
+	access, refresh := c.tokenStore.GetToken()
+	if access != "" {
+		req.Header.Set("Authorization", access)
+		req.Header.Set("Refresh-Token", refresh)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -84,8 +79,13 @@ func (c *Client) doRequest(
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
-	token.AccessToken = resp.Header.Get("Authorization")
-	token.RefreshToken = resp.Header.Get("Refresh-Token")
+
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -261,8 +261,8 @@ func (c *Client) EditMember(ctx context.Context, tag string, userID, guildMember
 }
 
 // ExitGuild - выйти из гильдии (любой участник)
-func (c *Client) ExitGuild(ctx context.Context, tag string, userID int) error {
-	path := fmt.Sprintf(PathExitGuild, tag, userID)
+func (c *Client) ExitGuild(ctx context.Context, tag string) error {
+	path := fmt.Sprintf(PathExitGuild, tag)
 	_, err := c.doRequest(ctx, "DELETE", path, nil, nil)
 	return err
 }
