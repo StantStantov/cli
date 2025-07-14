@@ -1,3 +1,4 @@
 .idea
 tmp/
-cmd/app.logs
+app.logs
+battleship-lesta-start.ru.crt

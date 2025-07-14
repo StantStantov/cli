@@ -39,7 +39,7 @@ type Promotion struct {
 	Duration  string             `json:"duration"`
 	IsActive  string             `json:"is_active"`
 	Chests    []Chest            `json:"chests"`
-	Product   []ProductPromotion `json:"product"`
+	Product   []ProductPromotion `json:"products"`
 }
 
 // Purchase - информация о покупке
