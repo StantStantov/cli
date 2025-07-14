@@ -17,11 +17,11 @@ type UserStat struct {
 // GuildStat - статистика гильдии
 type GuildStat struct {
 	ID                     int    `json:"id"`
-	GuildTag               string `json:"tag"`                // тег гильдии
-	Players                int    `json:"players"`            // количество участников
-	PlayersRatingPos       int    `json:"players_rating_pos"` // рейтинг участникам
-	WarsVictories          int    `json:"wins"`               // победы в войнах гильдий
-	WarsVictoriesRatingPos int    `json:"wins_rating_pos"`    // рейтинг по победам
+	GuildTag               string `json:"tag"`               // тег гильдии
+	Players                int    `json:"players"`           // количество участников
+	PlayersRatingPos       int    `json:"playes_rating_pos"` // рейтинг участникам (у ребят в Swagger указано поле как будто с ошибкой, но мало ли)
+	WarsVictories          int    `json:"wins"`              // победы в войнах гильдий
+	WarsVictoriesRatingPos int    `json:"wins_rating_pos"`   // рейтинг по победам
 }
 
 // UserListResponse - ответ со списком пользователей

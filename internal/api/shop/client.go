@@ -48,6 +48,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
+	// Устанавливаем заголовки
 	req.Header.Set("Content-Type", "application/json")
 	access, refresh := c.tokenStore.GetToken()
 	if access != "" {
