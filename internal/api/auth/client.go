@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -316,6 +317,8 @@ func (c *Client) CompleteOAuthPolling(
 
 				// сохраняем токены в клиенте
 				c.tokenStore.SetTokens(access, refresh)
+
+				log.Println(access)
 
 				tokens := &TokenResponse{
 					AccessToken:  access,

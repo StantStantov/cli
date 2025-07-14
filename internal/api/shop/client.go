@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"lesta-start-battleship/cli/storage/token"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -79,12 +80,13 @@ func (c *Client) GetProducts(ctx context.Context) ([]Product, error) {
 		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}
 
-	var products []Product
-	if err := json.NewDecoder(resp.Body).Decode(&products); err != nil {
+	var productResp ProductResponse
+	if err := json.NewDecoder(resp.Body).Decode(&productResp); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
+	log.Println(resp.Body)
 
-	return products, nil
+	return productResp.Results, nil
 }
 
 // GetChests - получение списка сундуков
@@ -107,12 +109,13 @@ func (c *Client) GetChests(ctx context.Context) ([]Chest, error) {
 		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}
 
-	var chests []Chest
-	if err := json.NewDecoder(resp.Body).Decode(&chests); err != nil {
+	var chestResp ChestResponse
+	if err := json.NewDecoder(resp.Body).Decode(&chestResp); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
+	log.Println(resp.Body)
 
-	return chests, nil
+	return chestResp.Results, nil
 }
 
 // GetPromotions - получение списка акций
@@ -135,12 +138,14 @@ func (c *Client) GetPromotions(ctx context.Context) ([]Promotion, error) {
 		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}
 
-	var promotions []Promotion
-	if err := json.NewDecoder(resp.Body).Decode(&promotions); err != nil {
+	var promotionResp PromotionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&promotionResp); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
 
-	return promotions, nil
+	log.Println(resp.Body)
+
+	return promotionResp.Results, nil
 }
 
 // BuyProduct - покупка предмета

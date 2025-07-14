@@ -16,18 +16,24 @@ type ProductPromotion struct {
 	Name string `json:"name"`
 }
 
+type ChestProduct struct {
+	ID          int    `json:"item_id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 // Chest - игровой сундук
 type Chest struct {
-	ID              int    `json:"item_id"`
-	Name            string `json:"name"`
-	Gold            int    `json:"gold"`
-	PromotionID     *int   `json:"promotion"`
-	ItemProbability int    `json:"item_probability"`
-	Currency        string `json:"currency_type"`
-	Cost            int    `json:"cost"`
-	Experience      int    `json:"experience"`
-	Products        string `json:"products"`
-	SpecialProducts string `json:"special_products"`
+	ID              int            `json:"item_id"`
+	Name            string         `json:"name"`
+	Gold            int            `json:"gold"`
+	PromotionID     *int           `json:"promotion"`
+	ItemProbability int            `json:"item_probability"`
+	Currency        string         `json:"currency_type"`
+	Cost            int            `json:"cost"`
+	Experience      int            `json:"experience"`
+	Products        []ChestProduct `json:"products"`
+	SpecialProducts []ChestProduct `json:"special_products"`
 }
 
 // Promotion - активная акция
@@ -39,7 +45,7 @@ type Promotion struct {
 	Duration  string             `json:"duration"`
 	IsActive  string             `json:"is_active"`
 	Chests    []Chest            `json:"chests"`
-	Product   []ProductPromotion `json:"product"`
+	Products  []ProductPromotion `json:"products"`
 }
 
 // Purchase - информация о покупке
@@ -57,4 +63,23 @@ type Purchase struct {
 type OpenChestRequest struct {
 	ChestID int `json:"item_id"`
 	Amount  int `json:"amount"`
+}
+
+type ChestResponse struct {
+	Count    int     `json:"count"`
+	Next     *string `json:"next"`
+	Previous *string `json:"previous"`
+	Results  []Chest `json:"results"`
+}
+type ProductResponse struct {
+	Count    int       `json:"count"`
+	Next     *string   `json:"next"`
+	Previous *string   `json:"previous"`
+	Results  []Product `json:"results"`
+}
+type PromotionResponse struct {
+	Count    int         `json:"count"`
+	Next     *string     `json:"next"`
+	Previous *string     `json:"previous"`
+	Results  []Promotion `json:"results"`
 }

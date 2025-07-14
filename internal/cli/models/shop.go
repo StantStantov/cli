@@ -24,8 +24,8 @@ type ShopItem struct {
 	Gold        int
 	Exp         int
 	ItemProb    int
-	StartDate   time.Time
-	EndDate     time.Time
+	StartDate   string
+	EndDate     string
 }
 
 // ShopResponse содержит данные магазина
@@ -245,7 +245,7 @@ func (m *ShopModel) renderItems() string {
 				item.Gold, item.Exp, item.ItemProb)
 		case "promotion":
 			desc += fmt.Sprintf("\n   🕒 Срок: %s - %s",
-				item.StartDate.Format("02.01"), item.EndDate.Format("02.01"))
+				item.StartDate, item.EndDate)
 		}
 
 		if item.DailyLimit != nil {
