@@ -6,44 +6,33 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"lesta-start-battleship/cli/storage/token"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"time"
 )
 
 // Client - клиент для взаимодействия с API инвентаря
 type Client struct {
-	baseURL     *url.URL
-	httpClient  *http.Client
-	accessToken string
+	baseURL    *url.URL
+	httpClient *http.Client
+	tokenStore *token.Storage
 }
 
 // NewClient создает новый клиент для работы с API инвентаря
-func NewClient(baseURL string) (*Client, error) {
+func NewClient(baseURL string, tokens *token.Storage) (*Client, error) {
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("некорректный базовый URL: %w", err)
 	}
 
-	// Создаем jar для кук
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		return nil, fmt.Errorf("не удалось создать cookie jar: %w", err)
-	}
-
 	return &Client{
 		baseURL: parsedURL,
 		httpClient: &http.Client{
-			Jar:     jar,
 			Timeout: 15 * time.Second, // Таймаут для безопасности
 		},
+		tokenStore: tokens,
 	}, nil
-}
-
-// SetAccessToken устанавливает Access token для аутентификации
-func (c *Client) SetAccessToken(token string) {
-	c.accessToken = token
 }
 
 // doRequest выполняет HTTP запрос
@@ -63,8 +52,10 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+	access, refresh := c.tokenStore.GetToken()
+	if access != "" {
+		req.Header.Set("Authorization", access)
+		req.Header.Set("Refresh-Token", refresh)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -72,6 +63,13 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 		return nil, fmt.Errorf("ошибка выполнения запроса: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if newAccess := resp.Header.Get("Authorization"); newAccess != "" {
+		c.tokenStore.SetTokens(newAccess, refresh)
+		if newRefresh := resp.Header.Get("Refresh-Token"); newRefresh != "" {
+			c.tokenStore.SetTokens(newAccess, newRefresh)
+		}
+	}
 
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
