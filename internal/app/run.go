@@ -16,7 +16,7 @@ import (
 const (
 	authURL       = "https://battleship-lesta-start.ru/"
 	guildsURL     = "https://battleship-lesta-start.ru/guild/"
-	guildsWsURL   = "wss://battleship-lesta-start.ru/guild/"
+	guildsWsURL   = "ws://37.9.53.187:8000/api/v1/"
 	inventoryURL  = "https://battleship-lesta-start.ru/inventory/"
 	scoreboardURL = "https://battleship-lesta-start.ru/scoreboard/"
 	shopURL       = "https://battleship-lesta-start.ru/shop/"
