@@ -1,6 +1,8 @@
 package initCli
 
 import (
+	"log"
+
 	"lesta-start-battleship/cli/internal/cli/models"
 	"lesta-start-battleship/cli/internal/clientdeps"
 	guildStorage "lesta-start-battleship/cli/storage/guild"
