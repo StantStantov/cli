@@ -21,6 +21,7 @@ func formatGuildChatUrl(guildId, userId int) string {
 }
 
 type ChatComponent struct {
+	UserId       int
 	Username     string
 	guildID      int
 	messages     []*guild.ChatHistoryMessage
@@ -33,7 +34,7 @@ type ChatComponent struct {
 	wsClient     *websocket.WebsocketClient
 }
 
-func NewChatComponent(username string, guildID int) *ChatComponent {
+func NewChatComponent(userId int, username string, guildID int) *ChatComponent {
 	/*client, err := websocket.NewWebsocketClient(
 		formatGuildChatUrl(1, 13), nil, strategies.GuildChatStrategy{})
 	if err != nil {
@@ -41,6 +42,7 @@ func NewChatComponent(username string, guildID int) *ChatComponent {
 	}*/
 
 	return &ChatComponent{
+		UserId:   userId,
 		Username: username,
 		guildID:  guildID,
 		Width:    55,
@@ -52,7 +54,7 @@ func (c *ChatComponent) Init() tea.Cmd {
 		return nil
 	}
 
-	client, err := websocket.NewWebsocketClient(formatGuildChatUrl(1, 13), nil, strategies.GuildChatStrategy{})
+	client, err := websocket.NewWebsocketClient(formatGuildChatUrl(c.guildID, c.UserId), nil, strategies.GuildChatStrategy{})
 	if err != nil {
 		return func() tea.Msg {
 			return handlers.WsErrorMsg{Err: err}

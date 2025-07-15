@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
-	"lesta-start-battleship/cli/internal/api/scoreboard"
+	"lesta-start-battleship/cli/internal/api/guilds"
 	"lesta-start-battleship/cli/internal/cli/ui"
 	"lesta-start-battleship/cli/internal/clientdeps"
 	"strings"
@@ -18,7 +18,7 @@ type JoinRequestsModel struct {
 	username     string
 	guildTag     string
 	guildName    string
-	requests     []scoreboard.UserStat
+	requests     []guilds.RequestResponse
 	currentPage  int
 	totalPages   int
 	selected     int
@@ -103,7 +103,7 @@ func (m *JoinRequestsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case tea.KeyEnter:
 			if len(m.requests) > 0 {
-				m.selectedUser = m.requests[m.selected].ID
+				m.selectedUser = m.requests[m.selected].UserID
 				m.confirmState = true
 			}
 			return m, nil
@@ -112,13 +112,13 @@ func (m *JoinRequestsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.parent, nil
 		}
 
-	case *scoreboard.UserListResponse:
+	case *guilds.RequestPagination:
 		m.loading = false
 		m.requests = msg.Items
 		m.totalPages = msg.TotalPages
-		if len(m.requests) == 0 {
+		/*if len(m.requests) == 0 {
 			m.errorMsg = "Заявки не найдены"
-		}
+		}*/
 		if m.selected >= len(m.requests) {
 			m.selected = max(0, len(m.requests)-1)
 		}
@@ -218,7 +218,8 @@ func (m *JoinRequestsModel) View() string {
 		sb.WriteString(ui.NormalStyle.Render("Нет заявок на вступление"))
 	} else {
 		for i, req := range m.requests {
-			line := fmt.Sprintf("Username: %s, Gold: %d, Experience: %d, Rating: %d", req.Name, req.Gold, req.Experience, req.Rating)
+			line := fmt.Sprintf("Usename: %s", req.UserName)
+			//line := fmt.Sprintf("Username: %s, Gold: %d, Experience: %d, Rating: %d", req.Name, req.Gold, req.Experience, req.Rating)
 			if i == m.selected {
 				sb.WriteString(ui.SelectedStyle.Render("> " + line))
 			} else {
@@ -241,7 +242,7 @@ func (m *JoinRequestsModel) renderConfirmView() string {
 	selectedReq := m.requests[m.selected]
 	sb.WriteString(ui.TitleStyle.Render("Обработка заявки"))
 	sb.WriteString("\n\n")
-	sb.WriteString(fmt.Sprintf("Игрок: %s\n\n", selectedReq.Name))
+	sb.WriteString(fmt.Sprintf("Игрок: %s\n\n", selectedReq.UserName))
 
 	if m.processing {
 		sb.WriteString(ui.HelpStyle.Render("Обработка запроса..."))
@@ -264,14 +265,14 @@ func (m *JoinRequestsModel) loadRequests() tea.Msg {
 		return err
 	}
 
-	var ids []int
+	/*var ids []int
 
 	for _, user := range reqID.Items {
 		ids = append(ids, user.UserID)
 	}
 
 	requests, err := m.Clients.ScoreboardClient.GetUserStats(ctx, ids, "", "",
-		false, requestsPerPage, 1)
+		false, requestsPerPage, 1)*/
 
-	return requests
+	return reqID
 }
