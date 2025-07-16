@@ -79,7 +79,7 @@ func (c *Client) doRequest(
 	req.Header.Set("Content-Type", "application/json")
 	access, refresh := c.tokenStore.GetToken()
 	if access != "" {
-		req.Header.Set("Authorization", access)
+		req.Header.Set("Authorization", "Bearer "+access)
 		req.Header.Set("Refresh-Token", refresh)
 	}
 
