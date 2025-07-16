@@ -118,7 +118,7 @@ func (c *Client) doWsConnect(path string) (*websocket.WebsocketClient, error) {
 	header.Set("Content-Type", "application/json")
 	access, refresh := c.tokenStore.GetToken()
 	if access != "" {
-		header.Set("Authorization", access)
+		header.Set("Authorization", "Bearer "+access)
 		log.Println(access)
 		header.Set("Refresh-Token", refresh)
 	}
