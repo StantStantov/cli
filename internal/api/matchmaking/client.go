@@ -5,7 +5,6 @@ import (
 	"lesta-start-battleship/cli/internal/api/websocket"
 	"lesta-start-battleship/cli/internal/api/websocket/strategies"
 	"lesta-start-battleship/cli/storage/token"
-	"log"
 	"net/http"
 )
 
@@ -43,8 +42,7 @@ func (c *Client) doWsConnect(path MatchmakingPath) (*websocket.WebsocketClient, 
 	header.Set("Content-Type", "application/json")
 	access, refresh := c.tokenStore.GetToken()
 	if access != "" {
-		header.Set("Authorization", "Bearer " + access)
-		log.Println(access)
+		header.Set("Authorization", "Bearer "+access)
 		header.Set("Refresh-Token", refresh)
 	}
 
