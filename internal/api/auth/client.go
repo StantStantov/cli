@@ -307,6 +307,8 @@ func (c *Client) CompleteOAuthPolling(
 				c.tokenStore.SetTokens(access, refresh)
 				log.Println(access, refresh)
 
+				log.Println(access)
+
 				tokens := &TokenResponse{
 					AccessToken:  access,
 					RefreshToken: refresh,
